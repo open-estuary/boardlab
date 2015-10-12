@@ -1,36 +1,50 @@
 #!/bin/bash
-#this is the pdu control script
+#author: Alan Huang, Justin Zhao
+#date 12/10/2015
+#Description: this is the pdu control script
 #
 
-USERLIST=/home/htsat/board/userlist
-BOARDCFG=/home/htsat/board/board.cfg
-#USERNAME=$1
-PDU_HOST=192.168.1.200
-BOOT_CMD=/usr/local/bin/ap7921-control
-user=`whoami`
-. $BOARDCFG
-index=`grep -w $user $USERLIST |cut -d " " -f3`
-eval PORT=$((PORT$index))
-eval OUTLET=$((OUTLET$index))
+. check_board
+POWER_CMD=ap7921-control
+
+POWER=${boardinfo#*power=}
+POWER=${POWER%%,*}
+
+OUTLET=`echo $POWER | cut -d " " -f2`
+POWER=`echo $POWER | cut -d " " -f1`
+
+# Check whether the power controller is deployed
+grep -w "$POWER:" $BOARDCFG >/dev/null 2>&1
+if [ $? != 0 ];then
+    echo "Power$BOARDIDX is not deployed into Open Lab, please touch the Lab. manager."
+    exit 1
+fi
+
+# Get the power controller information
+powerinfo=`grep -w "$POWER:" $BOARDCFG`
+PDU_HOST=${powerinfo#*ip=}
+PDU_HOST=${PDU_HOST%%,*}
+
 usage()
 {
-    echo "  Usage:"
-    echo "      board_reboot [board] [on|off|reboot]"
-    echo "      Used to power on, off or reboot specify boards"
-    echo "      For board options is d01 or d02"
+    echo "Usage: board_reboot [Num [on|off|reboot]]"
+    echo "  To power on, off or reboot specify boards, default to reboot board1!"
+    echo "  Num:            To operate the specified board assigned to user."
+    echo "  on|off|reboot:  To specify the power operation."
     exit 0
 } 
+
 board_op()
 {
 	case $2 in 
 	"on")
-		$BOOT_CMD $PDU_HOST $1 1
+		$POWER_CMD $PDU_HOST $1 1
 		;;
 	"off")
-		$BOOT_CMD $PDU_HOST $1 2
+		$POWER_CMD $PDU_HOST $1 2
 		;;
 	"reboot")
-		$BOOT_CMD $PDU_HOST $1 3
+		$POWER_CMD $PDU_HOST $1 3
 		;;
 	*)
 		usage
@@ -39,37 +53,34 @@ board_op()
 	exit 0
 }
 
-if [ $# = 2 ];then
-	case $1 in 
-	'd01')
-		board_op 4 $2
-		;;
-	"d02")
-		board_op $OUTLET $2
-		;;
-	*)
-		usage
-		;;
-	esac
+if [ $# = 2 ]; then
+    board_op $OUTLET $2
+    exit
 else 
-if [ $# != 0 ];then
-	usage
-fi
+    if [ $# -gt 1 ]; then
+    	usage
+    fi
+
+    if [ $# = 1 -a x"$1" = x"-h" ]; then
+        usage
+    fi
 fi
 
-#default no argument reboot d02
-
-current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd |grep telnet |grep $PORT|cut -d " " -f1`
+#default to reboot board1
+current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd | grep telnet | grep $PORT | cut -d " " -f1`
 current=`echo $current|cut -d "+" -f1`
 if [ "$current" = "" ];then
-/usr/local/bin/ap7921-control $PDU_HOST $OUTLET 3
+    $POWER_CMD $PDU_HOST $OUTLET 3
 else
-    current_user=`grep -w $current $USERLIST|cut -d " " -f1`
-    if [ "$current_user" = "$user" ];then
-        /usr/local/bin/ap7921-control $PDU_HOST $OUTLET 3
+    current_user=`grep -w $current $USERCFG|cut -d ":" -f1`
+    if [ "$current_user" = "$USERNAME" ];then
+        $POWER_CMD $PDU_HOST $OUTLET 3
     else
+        email=`grep -w $current $USERCFG`
+        email=${email#*email=}
+        email=${email%%,*}
         echo "              ********WARNING********"
-        echo "  $current_user is using the board on $PORT"
+        echo "  $email is using the board on $PORT"
         echo "  Please wait until he/she  finishes the work"
         echo "  Or you can contact with him"
     fi

@@ -1,5 +1,5 @@
 #!/bin/bash
-#author: Justin Zhao
+#author: Alan Huang, Justin Zhao
 #date 12/10/2015
 #description: connect the UART port of user's board by telnet
 
@@ -21,7 +21,7 @@ fi
 
 # Get the board index
 BOARDIDX=1
-if [ $# = 1 -a x"$1" != x"-h" ]; then
+if [ $# -gt 0 -a x"$1" != x"-h" ]; then
     BOARDIDX=$1
 fi
 

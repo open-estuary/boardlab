@@ -26,7 +26,7 @@ fi
 
 # Install binaries
 sudo cp ap7921-control $BINPATH
-sudo cp board_check $BINPATH
+sudo cp check_board $BINPATH
 sudo cp board_connect $BINPATH
 sudo cp board_reboot $BINPATH
 sudo cp cp_rootfs.sh $BINPATH
