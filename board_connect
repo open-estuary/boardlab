@@ -1,0 +1,159 @@
+#!/bin/bash
+
+USERLIST=/home/htsat/board/userlist
+USERLOG=/var/log/login.log
+BOARDCFG=/home/htsat/board/board.cfg
+USERNAME=`whoami`
+. $BOARDCFG
+BAK_PATH=/home/hisilicon/ftp/backup
+IMG=Image
+DTB=hip05-d02.dtb
+CPIO=hulk-hip05.cpio.gz
+#check whether user in permit list
+grep -w $USERNAME $USERLIST >/dev/null 2>&1
+if [ $? != 0 ];then
+    echo "you are not permited to used the board"
+    exit 1
+fi
+#get the board index
+index=`grep -w $USERNAME $USERLIST |cut -d " " -f3`
+
+# get the port number of user
+eval PORT=$((PORT$index))
+EMAIL=`grep -w $USERNAME $USERLIST |cut -d " " -f2`
+
+declare -a grub
+grub=(" " "$GRUB1" "$GRUB2" "$GRUB3" "$GRUB4" "$GRUB5" "$GRUB6" "$GRUB7" "$GRUB8")
+# specify the config file 
+length=${#grub[@]}
+if [ $index -lt $length ]; then
+    CONFFILE=${grub[$index]}
+fi
+
+# modify for D01
+usage()
+{
+    echo "	Usage:"
+    echo "	-h     : Display this information"
+    echo " 	d01    : connect d01 board"
+    echo " 	d02    : connect d02 board"
+	exit
+}
+declare board_using=0
+declare board_user="no user"
+using_check()
+{
+ 	current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd|grep telnet |grep -w $1|cut -d " " -f1`
+ 	psid=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd |grep -w $1|awk '{print $2}'`
+	current=`echo $current|cut -d "+" -f1`
+	echo "psid is $psid"
+	if [ "$current" = "" ];then
+        	board_using=0
+    	else
+       		board_using=1
+		board_user="$current"
+    	fi
+}
+check_neccessary()
+{
+	if [ ! -f ~/ftp/$IMG ] ;then
+		cp $BAK_PATH/$IMG ~/ftp/
+	fi 
+	if [ ! -f ~/ftp/$DTB ];then
+		cp $BAK_PATH/$DTB ~/ftp/
+	fi
+	if [ ! -f ~/ftp/$CPIO ];then
+		cp $BAK_PATH/$CPIO ~/ftp/	
+	fi
+	
+}
+function show_confirm()
+{
+	read -n1 -p "Do you want to kill it and try a new session [Y/N]?" answer
+	case $answer in
+	Y | y)
+     echo  -e "\n fine ,continue"
+	;;
+	N | n)
+    echo -e "\n ok,good bye"
+	exit 0
+	;;
+	*)
+ 	echo -e  "\n Sorry! Error choice"
+	exit 0
+	;;
+	esac
+}
+connect()
+{
+    using_check $2
+    if [ $board_using = 1 ];then
+        mail_addr=`grep -w $board_user $USERLIST | cut -d " " -f2`
+        mail_user=`grep -w $board_user $USERLIST | cut -d " " -f1`
+		if [ "$USERNAME" = "$mail_user" ];then
+			echo "You are using another session connected to the board"
+			show_confirm
+			echo "kill the ps $psid"
+			kill $psid
+		else
+        	echo "$mail_addr is using the board on $2"
+        	echo "if you really want to use it, please contact with him"
+       		exit 1
+		fi
+   fi
+		# for d01 board
+		if [ $1 = 1 ];then 
+        	telnet localhost $2
+		else
+		# for d02 board
+			check_neccessary
+			cp ~/grub.conf $CONFFILE
+			telnet localhost $2
+		fi 
+    
+    exit 0
+}
+if [ $# = 1 ] ;then
+    case $1 in
+        -h)
+        	usage
+        	;;
+        "d01")
+        	echo "will connect d01"
+        	connect  1 20047
+        	;;
+        "d02")
+        	echo "will connect d02" 
+        	connect 2 $PORT
+        	;;
+		*)
+			usage
+			;;
+    esac
+else if [ $# -gt 1 ];then
+	echo "Wrong argument"
+	usage
+fi
+fi
+
+connect 2 $PORT
+exit
+#check whether the under using 
+line=`ps -ef |grep telnet |grep $PORT`
+if [ "$line" = "" ];then
+    echo "User $EMAIL login port $PORT at `date`">> $USERLOG
+    cp ~/grub.conf $CONFFILE
+    #add for new system
+    #rm  $CONFFILE
+    #ln -s /home/hisilicon/ftp/config$USERNAME $CONFFILE
+    #chmod 666 $CONFFILE         #write right for other teammates to rewrite
+    telnet localhost $PORT
+else
+    current_user=${line:0:6}
+    if [ $? = 0 ] ;then
+        last_user=`grep $current_user $USERLIST | cut -d " " -f2`
+        echo "  $last_user is using the board now "
+        echo "  if you really want to use it, please contact with him"
+        exit 1
+    fi
+fi

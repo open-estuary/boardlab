@@ -1,0 +1,59 @@
+#!/bin/sh
+# for test
+USERLIST=/home/htsat/board/userlist
+BOARDCFG=/home/htsat/board/board.cfg
+. $BOARDCFG
+user=`whoami`
+FTP_PATH=/home/hisilicon/ftp
+BACK_UP=$FTP_PATH/backup
+FTP_DIR=$FTP_PATH/$user
+UBUNTU=ubuntu
+SUSE=opensuse
+IMG=Image
+DTB=hip05-d02.dtb
+CPIO=hulk-hip05.cpio.gz
+OLD_CFG=/home/$user/defconfig
+CFG_FILE=/home/$user/grub.conf
+index=`grep $user $USERLIST|cut -d " " -f3`
+if [ -L ~/ftp ];then
+    rm ~/ftp
+fi
+
+if [ -L ~/config ];then
+    rm ~/config
+fi
+if [ ! -f $CFG_FILE ];then
+    /usr/bin/gencfg.sh
+fi
+if [ -f $OLD_CFG ];then
+    rm  $OLD_CFG
+fi 
+if [ ! -d $FTP_DIR ];then
+    mkdir $FTP_DIR
+fi
+echo "$index"
+grub_connect=GRUB$index
+set -x
+file_name=$(cat $BOARDCFG | grep $grub_connect | awk -F '=' '{print $2}')
+ln -s $file_name /home/$user/config
+ln -s $FTP_DIR /home/$user/ftp
+set +x
+#init the ftp directory
+if [ $? = 0 ];then
+    if [ ! -e $FTP_PATH/$user/$IMG ];then
+        cp $BACK_UP/$IMG ~/ftp
+    fi
+
+    if [ ! -e $FTP_PATH/$user/$DTB ];then
+        cp $BACK_UP/$DTB ~/ftp
+    fi
+    if [ ! -e $FTP_PATH/$user/$CPIO ];then
+        cp $BACK_UP/$CPIO ~/ftp
+    fi
+    if [ ! -d $FTP_PATH/$user/$UBUNTU ];then
+        mkdir $FTP_PATH/$user/$UBUNTU
+    fi
+    if [ ! -d $FTP_PATH/$user/$SUSE ];then
+        mkdir $FTP_PATH/$user/$SUSE
+    fi
+fi

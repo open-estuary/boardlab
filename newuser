@@ -1,0 +1,15 @@
+#!/bin/sh
+#this is the script to create multi user
+USERLIST=/home/htsat/board/userlist
+while read username email boardgroup pduport
+    do
+        echo $username
+        id $username >/dev/null 2>&1
+        if [ $? = 0 ];then
+            echo "$username exist"
+        else
+	    echo "create user $username ...."
+            useradd $username -g board$boardgroup -s /bin/bash -m
+            echo $username:123456|chpasswd
+        fi
+    done  <$USERLIST

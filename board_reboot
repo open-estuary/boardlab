@@ -1,0 +1,76 @@
+#!/bin/bash
+#this is the pdu control script
+#
+
+USERLIST=/home/htsat/board/userlist
+BOARDCFG=/home/htsat/board/board.cfg
+#USERNAME=$1
+PDU_HOST=192.168.1.200
+BOOT_CMD=/usr/local/bin/ap7921-control
+user=`whoami`
+. $BOARDCFG
+index=`grep -w $user $USERLIST |cut -d " " -f3`
+eval PORT=$((PORT$index))
+eval OUTLET=$((OUTLET$index))
+usage()
+{
+    echo "  Usage:"
+    echo "      board_reboot [board] [on|off|reboot]"
+    echo "      Used to power on, off or reboot specify boards"
+    echo "      For board options is d01 or d02"
+    exit 0
+} 
+board_op()
+{
+	case $2 in 
+	"on")
+		$BOOT_CMD $PDU_HOST $1 1
+		;;
+	"off")
+		$BOOT_CMD $PDU_HOST $1 2
+		;;
+	"reboot")
+		$BOOT_CMD $PDU_HOST $1 3
+		;;
+	*)
+		usage
+		;;
+	esac
+	exit 0
+}
+
+if [ $# = 2 ];then
+	case $1 in 
+	'd01')
+		board_op 4 $2
+		;;
+	"d02")
+		board_op $OUTLET $2
+		;;
+	*)
+		usage
+		;;
+	esac
+else 
+if [ $# != 0 ];then
+	usage
+fi
+fi
+
+#default no argument reboot d02
+
+current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd |grep telnet |grep $PORT|cut -d " " -f1`
+current=`echo $current|cut -d "+" -f1`
+if [ "$current" = "" ];then
+/usr/local/bin/ap7921-control $PDU_HOST $OUTLET 3
+else
+    current_user=`grep -w $current $USERLIST|cut -d " " -f1`
+    if [ "$current_user" = "$user" ];then
+        /usr/local/bin/ap7921-control $PDU_HOST $OUTLET 3
+    else
+        echo "              ********WARNING********"
+        echo "  $current_user is using the board on $PORT"
+        echo "  Please wait until he/she  finishes the work"
+        echo "  Or you can contact with him"
+    fi
+fi
