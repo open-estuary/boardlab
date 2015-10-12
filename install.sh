@@ -37,10 +37,10 @@ sudo cp newuser $BINPATH
 . $CFGPATH/boardlab.cfg
 
 mkdir -p $ftp_dir/backup 2>/dev/null
-cp Image_D02 $ftp_dir/backup/
-cp hip05-d02.dtb $ftp_dir/backup/
-cp zImage_D01 $ftp_dir/backup/
-cp hip04-d01.dtb $ftp_dir/backup/
-cp mini-rootfs.cpio.gz $ftp_dir/backup/
+sudo cp Image_D02 $ftp_dir/backup/
+sudo cp hip05-d02.dtb $ftp_dir/backup/
+sudo cp zImage_D01 $ftp_dir/backup/
+sudo cp hip04-d01.dtb $ftp_dir/backup/
+sudo cp mini-rootfs.cpio.gz $ftp_dir/backup/
 
 echo "Boardlab installed successfully!"
