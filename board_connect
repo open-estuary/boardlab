@@ -100,6 +100,8 @@ connect()
 
     check_neccessary
     cp ~/grub.conf $GRUBFILE
+	echo -e "\033[0m"
+	echo -e "\033[32mYou connected to board: index=$BOARDIDX, port=$PORT, type=$BOARDTYPE, grub=$GRUBFILE.\033[0m"
     telnet localhost $1
     
     exit 0
