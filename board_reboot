@@ -59,12 +59,10 @@ board_op()
     current=`echo $current|cut -d "+" -f1`
     if [ "$current" = "" ];then
 	    $POWER_CMD $PDU_HOST $OUTLET $OPER
-		echo ""
     else
         current_user=`grep -w $current $USERCFG|cut -d ":" -f1`
         if [ "$current_user" = "$USERNAME" ];then
 	        $POWER_CMD $PDU_HOST $OUTLET $OPER
-			echo ""
         else
             email=`grep -w $current $USERCFG`
             email=${email#*email=}

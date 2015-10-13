@@ -1,0 +1,60 @@
+#!/bin/bash
+#author: Alan Huang, Justin Zhao
+#date: 13/10/2015
+#description: Intialize user
+
+CHKBOARD=/usr/bin/check_board
+. $CHKBOARD
+
+BACK_UP=$ftp_dir/$ftp_bak
+FTP_DIR=$ftp_dir/$USERNAME
+OLD_CFG=~/defconfig
+CFG_FILE=~/grub.conf
+
+if [ -L ~/ftp ];then
+    rm ~/ftp
+fi
+
+if [ -L ~/config ];then
+    rm ~/config
+fi
+
+if [ ! -f $CFG_FILE ];then
+    gencfg.sh
+fi
+if [ -f $OLD_CFG ];then
+    rm  $OLD_CFG
+fi 
+if [ ! -d $FTP_DIR ];then
+    mkdir -p $FTP_DIR
+fi
+
+ln -s $GRUBFILE ~/config
+ln -s $FTP_DIR ~/ftp
+
+#init the ftp directory
+if [ $? = 0 ];then
+    if [ ! -e $FTP_DIR/$img_d01 ];then
+        cp $BACK_UP/$img_d01 ~/ftp
+    fi
+
+    if [ ! -e $FTP_DIR/$img_d02 ];then
+        cp $BACK_UP/$img_d02 ~/ftp
+    fi
+
+    if [ ! -e $FTP_DIR/$dtb_d01 ];then
+        cp $BACK_UP/$dtb_d01 ~/ftp
+    fi
+
+    if [ ! -e $FTP_DIR/$dtb_d01 ];then
+        cp $BACK_UP/$dtb_d01 ~/ftp
+    fi
+
+    if [ ! -e $FTP_DIR/$mini_rootfs ];then
+        cp $BACK_UP/$mini_rootfs ~/ftp
+    fi
+
+    if [ ! -d $FTP_DIR/ubuntu ];then
+        mkdir $FTP_DIR/ubuntu
+    fi
+fi

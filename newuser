@@ -1,15 +1,32 @@
 #!/bin/sh
-#this is the script to create multi user
-USERLIST=/home/htsat/board/userlist
-while read username email boardgroup pduport
-    do
-        echo $username
-        id $username >/dev/null 2>&1
-        if [ $? = 0 ];then
-            echo "$username exist"
-        else
-	    echo "create user $username ...."
-            useradd $username -g board$boardgroup -s /bin/bash -m
-            echo $username:123456|chpasswd
-        fi
-    done  <$USERLIST
+#author: Alan Huang, Justin Zhao
+#date: 13/10/2015
+#description: this is the script to create multi user
+
+USERCFG=/etc/boardlab/users.cfg
+while read LINE
+do
+    username=${LINE%%:*}
+
+    id $username >/dev/null 2>&1
+    if [ $? = 0 ];then
+        echo "$username existed!"
+    else
+        echo "Create user $username ...."
+
+        boards=${LINE#*boards=}
+        boards=${boards%%,*}
+        num=${boards%% *}
+        boards=${boards#* }
+        cmd="useradd $username -s /bin/bash -m -G board$num"
+        while [ ${#num} != ${#boards} ]
+        do
+            num=${boards%% *}
+            boards=${boards#* }
+
+            cmd=$cmd",board$num"
+        done
+        $cmd
+        echo $username:123456|chpasswd
+    fi
+done  <$USERCFG

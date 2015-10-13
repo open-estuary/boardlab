@@ -54,3 +54,11 @@ PORT=${PORT%%,*}
 
 BOARDTYPE=${boardinfo#*type=}
 BOARDTYPE=${BOARDTYPE%%,*}
+
+CONFFILE=${boardinfo#*mac=}
+CONFFILE=${CONFFILE%%,*}
+CONFFILE=$ftp_dir/$grub_prefix"-"$CONFFILE
+
+GRUBFILE=${boardinfo#*mac=}
+GRUBFILE=${GRUBFILE%%,*}
+GRUBFILE=$ftp_dir/$grub_prefix"-"$GRUBFILE

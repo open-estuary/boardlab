@@ -5,16 +5,12 @@
 
 . check_board
 
-GRUBFILE=${boardinfo#*mac=}
-GRUBFILE=${GRUBFILE%%,*}
-GRUBFILE=$ftp_dir/$grub_prefix"-"$GRUBFILE
-
 # Usage information
 usage()
 {
     echo "Usage: board_connect [Num]"
-    echo "  -h     : Display this information"
-    echo "  Num    : To use the specified board assigned to user, Num is an interger board index which must be greater than 0, default to use No.1 board."
+    echo "    -h     : Display this information"
+    echo "    Num    : To use the specified board assigned to user, Num is an interger board index which must be greater than 0, default to use No.1 board."
 	exit
 }
 
@@ -36,17 +32,17 @@ using_check()
 
 check_neccessary()
 {
-    BAK_PATH=$ftp_dir/backup
+    BAK_PATH=$ftp_dir/$ftp_bak
 
     if [ x"$BOARDTYPE" = x"D01" ];then
-        IMG=zImage_D01
-        DTB=hip04-d01.dtb
+        IMG=$img_d01
+        DTB=$dtb_d01
     else
-        IMG=Image_D02
-        DTB=hip05-d02.dtb
+        IMG=$img_d02
+        DTB=$dtb_d02
     fi
 
-    CPIO=mini-rootfs.cpio.gz
+    CPIO=$mini_rootfs
 
 	if [ ! -f ~/ftp/$IMG ] ;then
 		cp $BAK_PATH/$IMG ~/ftp/
@@ -58,6 +54,7 @@ check_neccessary()
 		cp $BAK_PATH/$CPIO ~/ftp/	
 	fi
 	
+    cp ~/grub.conf $GRUBFILE
 }
 
 function show_confirm()
@@ -99,9 +96,6 @@ connect()
     fi
 
     check_neccessary
-    cp ~/grub.conf $GRUBFILE
-	echo -e "\033[0m"
-	echo -e "\033[32mYou connected to board: index=$BOARDIDX, port=$PORT, type=$BOARDTYPE, grub=$GRUBFILE.\033[0m"
     telnet localhost $1
     
     exit 0
