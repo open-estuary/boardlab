@@ -5,7 +5,7 @@ LABCFG="/etc/boardlab/boardlab.cfg"
 USER=`whoami`
 SVRIP=`ifconfig -a|grep -A 2 eth|grep "inet addr"|grep -v 127.0.0.1|grep -v "Bcast:0.0.0.0"|awk '{print $2}'|tr -d "addr:"|sed -n "1p"`
 
-DEFCFG=~/grub.conf
+DEFCFG=~/grub.cfg
 
 echo "#Description: default grub config file
 #author: automated

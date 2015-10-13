@@ -54,7 +54,7 @@ check_neccessary()
 		cp $BAK_PATH/$CPIO ~/ftp/	
 	fi
 	
-    cp ~/grub.conf $GRUBFILE
+    cp ~/grub.cfg $GRUBFILE
 }
 
 function show_confirm()
@@ -96,6 +96,8 @@ connect()
     fi
 
     check_neccessary
+	echo -e "\033[0m"
+	echo -e "\033[32mYou connected to board: index=$BOARDIDX, type=$BOARDTYPE, port=$PORT, grub=$GRUBFILE.\033[0m"
     telnet localhost $1
     
     exit 0
