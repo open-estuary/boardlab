@@ -21,8 +21,10 @@ fi
 
 # Get the board index
 BOARDIDX=1
-if [ $# -gt 0 -a x"$1" != x"-h" ]; then
-    BOARDIDX=$1
+if [ $# -gt 0 ]; then
+    if [ "$1" -gt 0 ] 2>/dev/null ; then
+        BOARDIDX=$1
+    fi
 fi
 
 userinfo=`grep -w "$USERNAME:" $USERCFG`

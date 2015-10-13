@@ -14,7 +14,7 @@ usage()
 {
     echo "Usage: board_connect [Num]"
     echo "  -h     : Display this information"
-    echo "  Num    : To use the specified board assigned to user, default to user No.1 board."
+    echo "  Num    : To use the specified board assigned to user, Num is an interger board index which must be greater than 0, default to use No.1 board."
 	exit
 }
 
@@ -110,32 +110,18 @@ if [ x"$#" = x"1" -a x"$1" = x"-h" ]; then
     exit
 fi
 
-if [ $# -gt 1 ]; then
-    usage
-    exit
+if [ $# -gt 0 ]; then
+    showhelp=1
+    if [ $# = 1 ]; then
+        if [ "$1" -gt 0 ] 2>/dev/null ; then 
+            showhelp=0 
+        fi
+    fi
+
+    if [ $showhelp = 1 ];then
+        usage
+        exit
+    fi
 fi
 
 connect $PORT
-exit
-
-#check whether the under using 
-line=`ps -ef |grep telnet |grep $PORT`
-if [ "$line" = "" ];then
-    echo "User $EMAIL login port $PORT at `date`">> $USERLOG
-    cp ~/grub.conf $GRUBFILE
-    #add for new system
-    #rm  $GRUBFILE
-    #ln -s /home/hisilicon/ftp/config$USERNAME $GRUBFILE
-    #chmod 666 $GRUBFILE         #write right for other teammates to rewrite
-    telnet localhost $PORT
-else
-    current_user=${line:0:6}
-    if [ $? = 0 ] ;then
-        usinginfo=`grep -w "$current_user:" $USERCFG`
-        last_user=${usinginfo#*email=}
-        last_user=${last_user%%,*}
-        echo "  $last_user is using the board now "
-        echo "  if you really want to use it, please contact with him"
-        exit 1
-    fi
-fi

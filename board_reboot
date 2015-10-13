@@ -27,61 +27,85 @@ PDU_HOST=${PDU_HOST%%,*}
 
 usage()
 {
-    echo "Usage: board_reboot [Num [on|off|reboot]]"
-    echo "  To power on, off or reboot specify boards, default to reboot board1!"
-    echo "  Num:            To operate the specified board assigned to user."
-    echo "  on|off|reboot:  To specify the power operation."
+    echo "Usage: board_reboot [Num] [on|off|reboot]"
+    echo "To power on, off or reboot specify boards, default to reboot board1 without any parameters!"
+    echo "    Num:            To operate the specified board assigned to user, Num is an interger board index which must be greater than 0, default to operate board1."
+    echo "    on|off|reboot:  To specify a power operation, default to reboot."
     exit 0
 } 
 
 board_op()
 {
-	case $2 in 
+	OPER=3
+
+	case $1 in 
 	"on")
-		$POWER_CMD $PDU_HOST $1 1
+		OPER=1
 		;;
 	"off")
-		$POWER_CMD $PDU_HOST $1 2
+		OPER=2
 		;;
 	"reboot")
-		$POWER_CMD $PDU_HOST $1 3
+		OPER=3
 		;;
 	*)
 		usage
+        exit
 		;;
 	esac
+
+# Check the whether the board is being used, and send the operation command
+    current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd | grep telnet | grep $PORT | cut -d " " -f1`
+    current=`echo $current|cut -d "+" -f1`
+    if [ "$current" = "" ];then
+	    $POWER_CMD $PDU_HOST $OUTLET $OPER
+    else
+        current_user=`grep -w $current $USERCFG|cut -d ":" -f1`
+        if [ "$current_user" = "$USERNAME" ];then
+	        $POWER_CMD $PDU_HOST $OUTLET $OPER
+        else
+            email=`grep -w $current $USERCFG`
+            email=${email#*email=}
+            email=${email%%,*}
+            echo "              ********WARNING********"
+            echo "  $email is using the board on $PORT"
+            echo "  Please wait until he/she  finishes the work"
+            echo "  Or you can contact with him by email."
+        fi
+    fi
 	exit 0
 }
 
 if [ $# = 2 ]; then
-    board_op $OUTLET $2
+    if [ "$1" -gt 0 ] 2>/dev/null ; then
+        board_op $2
+    else
+        usage
+    fi
     exit
 else 
     if [ $# -gt 1 ]; then
     	usage
+        exit
     fi
 
-    if [ $# = 1 -a x"$1" = x"-h" ]; then
-        usage
+    
+    if [ $# = 1 ]; then
+        if [ "$1" -gt 0 ] 2>/dev/null ; then
+            board_op reboot
+        else
+            case $1 in
+            "on"|"off"|"reboot")
+                board_op $1
+                ;;
+            *)
+                usage
+                ;;
+            esac
+        fi
+        exit
     fi
 fi
 
 #default to reboot board1
-current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd | grep telnet | grep $PORT | cut -d " " -f1`
-current=`echo $current|cut -d "+" -f1`
-if [ "$current" = "" ];then
-    $POWER_CMD $PDU_HOST $OUTLET 3
-else
-    current_user=`grep -w $current $USERCFG|cut -d ":" -f1`
-    if [ "$current_user" = "$USERNAME" ];then
-        $POWER_CMD $PDU_HOST $OUTLET 3
-    else
-        email=`grep -w $current $USERCFG`
-        email=${email#*email=}
-        email=${email%%,*}
-        echo "              ********WARNING********"
-        echo "  $email is using the board on $PORT"
-        echo "  Please wait until he/she  finishes the work"
-        echo "  Or you can contact with him"
-    fi
-fi
+board_op reboot
