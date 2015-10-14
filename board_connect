@@ -97,7 +97,7 @@ connect()
 
     check_neccessary
 	echo -e "\033[0m"
-	echo -e "\033[32mYou connected to board: index=$BOARDIDX, type=$BOARDTYPE, port=$PORT, grub=$GRUBFILE.\033[0m"
+	echo -e "\033[32mConnected to board: No=$BOARDIDX, type=$BOARDTYPE, port=$PORT, power=$POWER $OUTLET, grub=$GRUBFILE.\033[0m"
     telnet localhost $1
     
     exit 0

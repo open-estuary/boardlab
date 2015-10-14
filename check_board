@@ -55,10 +55,19 @@ PORT=${PORT%%,*}
 BOARDTYPE=${boardinfo#*type=}
 BOARDTYPE=${BOARDTYPE%%,*}
 
-CONFFILE=${boardinfo#*mac=}
-CONFFILE=${CONFFILE%%,*}
-CONFFILE=$ftp_dir/$grub_prefix"-"$CONFFILE
-
 GRUBFILE=${boardinfo#*mac=}
 GRUBFILE=${GRUBFILE%%,*}
 GRUBFILE=$ftp_dir/$grub_prefix"-"$GRUBFILE
+
+POWER=${boardinfo#*power=}
+POWER=${POWER%%,*}
+
+OUTLET=`echo $POWER | cut -d " " -f2`
+POWER=`echo $POWER | cut -d " " -f1`
+
+# Check whether the power controller is deployed
+grep -w "$POWER:" $BOARDCFG >/dev/null 2>&1
+if [ $? != 0 ];then
+    echo "Power$BOARDIDX is not deployed into Open Lab, please touch the Lab. manager."
+    exit 1
+fi
