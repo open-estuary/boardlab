@@ -8,8 +8,6 @@ CHKBOARD=/usr/bin/check_board
 
 BACK_UP=$ftp_dir/$ftp_bak
 FTP_DIR=$ftp_dir/$USERNAME
-OLD_CFG=~/defconfig
-CFG_FILE=~/grub.conf
 
 if [ -L ~/ftp ];then
     rm ~/ftp
@@ -19,12 +17,10 @@ if [ -L ~/config ];then
     rm ~/config
 fi
 
-if [ ! -f $CFG_FILE ];then
-    gencfg.sh
+if [ ! -f "${DEFCFG}.${BOARDNO}" ];then
+    gencfg.sh ${BOARDNO}
 fi
-if [ -f $OLD_CFG ];then
-    rm  $OLD_CFG
-fi 
+
 if [ ! -d $FTP_DIR ];then
     mkdir -p $FTP_DIR
 fi

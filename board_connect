@@ -54,7 +54,11 @@ check_neccessary()
 		cp $BAK_PATH/$CPIO ~/ftp/	
 	fi
 	
-    cp ~/grub.cfg $GRUBFILE
+    cfgfile="${DEFCFG}.${BOARDNO}"
+	if [ ! -f $cfgfile ]; then
+		gencfg.sh $BOARDNO
+	fi
+    cp ${cfgfile} $GRUBFILE
 }
 
 function show_confirm()
