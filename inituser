@@ -17,8 +17,8 @@ if [ -L ~/config ];then
     rm ~/config
 fi
 
-if [ ! -f "${DEFCFG}.${BOARDNO}" ];then
-    gencfg.sh ${BOARDNO}
+if [ ! -f "${DEFCFG}" ];then
+    gencfg.sh
 fi
 
 if [ ! -d $FTP_DIR ];then

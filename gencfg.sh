@@ -4,7 +4,6 @@ LABCFG="/etc/boardlab/boardlab.cfg"
 
 USER=`whoami`
 SVRIP=`ifconfig -a|grep -A 2 eth|grep "inet addr"|grep -v 127.0.0.1|grep -v "Bcast:0.0.0.0"|awk '{print $2}'|tr -d "addr:"|sed -n "1p"`
-cfgfile="${DEFCFG}.$1"
 
 echo "#Description: default grub config file
 #author: automated
@@ -29,4 +28,4 @@ menuentry \"Ubuntu D01\" --id ubuntu_d01 {
     set root=(tftp,$SVRIP)
     linux /$USER/$img_d01 rdinit=/init console=ttyS0,115200 earlycon=uart8250,mmio32,0x80300000 root=/dev/nfs rw nfsroot=$SVRIP:$ftp_dir/$USER/ubuntu ip=dhcp
     devicetree /$USER/$dtb_d01
-}" >${cfgfile}
+}" >${DEFCFG}

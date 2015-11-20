@@ -26,7 +26,6 @@ if [ $# -gt 0 ]; then
         BOARDIDX=$1
     fi
 fi
-BOARDNO=$BOARDIDX
 
 userinfo=`grep -w "$USERNAME:" $USERCFG`
 boards=${userinfo#*boards=}
