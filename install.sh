@@ -35,6 +35,7 @@ if [ $? != 0 ]; then
 fi
 cp check_board $BINPATH
 cp board_connect $BINPATH
+cp board_list $BINPATH
 cp board_reboot $BINPATH
 cp cp_rootfs.sh $BINPATH
 cp gencfg.sh $BINPATH

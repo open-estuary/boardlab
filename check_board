@@ -29,6 +29,22 @@ fi
 
 userinfo=`grep -w "$USERNAME:" $USERCFG`
 boards=${userinfo#*boards=}
+
+if [ x"boardslist" = x"$1" ]; then
+	echo "${USERNAME} possessed boards list:"
+	echo "Idx: Board No"
+	idx=1
+	while [ true ]
+	do
+		boardno=`echo ${boards%%,*} | cut -d " " -f$idx`
+		if [ x"" = x"$boardno" ]; then
+			exit 0
+		fi
+		echo "${idx}  : ${boardno}"
+		let idx=$idx+1
+	done
+fi
+
 BOARDIDX=`echo ${boards%%,*} | cut -d " " -f$BOARDIDX`
 if [ x"" = x"$BOARDIDX" ]; then
     echo "Error board index!"

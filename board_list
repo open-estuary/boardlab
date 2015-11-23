@@ -1,0 +1,6 @@
+#!/bin/bash
+#author: Justin Zhao
+#date 23/11/2015
+#description: list all boards possessed by user
+
+./check_board boardslist
