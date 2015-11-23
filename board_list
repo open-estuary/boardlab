@@ -3,4 +3,4 @@
 #date 23/11/2015
 #description: list all boards possessed by user
 
-./check_board boardslist
+check_board boardslist
