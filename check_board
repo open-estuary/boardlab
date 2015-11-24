@@ -32,7 +32,7 @@ boards=${userinfo#*boards=}
 
 if [ x"boardslist" = x"$1" ]; then
 	echo "${USERNAME} possessed boards list:"
-	echo "Idx: Board No"
+	echo "Idx: Board No -> Shared Users"
 	idx=1
 	while [ true ]
 	do
@@ -40,7 +40,12 @@ if [ x"boardslist" = x"$1" ]; then
 		if [ x"" = x"$boardno" ]; then
 			exit 0
 		fi
-		echo "${idx}  : ${boardno}"
+		shared=`grep -E "boards=.*\b${boardno}\b" $USERCFG | grep -v "${USERNAME}:" | cut -d "," -f1 | sed "s/email=//g" | tr '\n' ";"|sed "s/;/; /g"`
+		if [ x"" = x"$shared" ]; then
+			echo "${idx}  : ${boardno}"
+		else
+			echo "${idx}  : ${boardno} -> ${shared}"
+		fi
 		let idx=$idx+1
 	done
 fi
