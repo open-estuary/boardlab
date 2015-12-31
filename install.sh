@@ -8,6 +8,7 @@ BINPATH="/usr/bin"
 
 apt-get install ser2net -y
 apt-get install expect-lite -y
+apt-get install ipmitool -y
 
 PRJDIR="`dirname $0`"
 cd $PRJDIR
