@@ -21,10 +21,10 @@ usage()
     exit 0
 } 
 
-board_op()
+# include d01 d02 1610 and othe other boards without BMC
+board_op_other()
 {
 	OPER=3
-
 	case $1 in 
 	"on")
 		OPER=1
@@ -41,7 +41,7 @@ board_op()
 		;;
 	esac
 
-# Check the whether the board is being used, and send the operation command
+    # Check the whether the board is being used, and send the operation command
     current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd | grep telnet | grep $PORT | cut -d " " -f1`
     current=`echo $current|cut -d "+" -f1`
     if [ "$current" = "" ];then
@@ -62,39 +62,79 @@ board_op()
             echo "  Or you can contact with him by email."
         fi
     fi
-	exit 0
+   exit 0
 }
 
-if [ $# = 2 ]; then
-    if [ "$1" -gt 0 ] 2>/dev/null ; then
-        board_op $2
+# power option of d03 and other boards wiht BMC: on off reboot
+board_op_d03()
+{
+# action on power
+if [ $BOARDTYPE = "D03" ]; then
+	# include d03 and othe boards with BMC
+	case $1 in 
+	"on" | "off" )
+	     ipmitool -H $BMCIP -I lanplus -U "root" -P "Huawei12#$" chassis $1 
+	     ;;
+	"reboot")
+	     ipmitool -H $BMCIP -I lanplus -U "root" -P "Huawei12#$" chassis power off 
+	     sleep 3
+	     ipmitool -H $BMCIP -I lanplus -U "root" -P "Huawei12#$" chassis power on 
+	;;
+	*)
+	     usage
+             ;;
+	esac
+	exit
+fi
+}
+
+
+# option which board,and operation it on power
+board_op()
+{
+    if [ "$BOARDTYPE" = "D03" ]; then
+        board_op_d03 $1
     else
-        usage
+	board_op_other $1
     fi
-    exit
-else 
-    if [ $# -gt 1 ]; then
+}
+
+
+# action on power
+if [ $# = 2 ]; then
+	if [ "$1" -gt 0 ] 2>/dev/null ; then
+	 board_op $2
+	fi
+	exit
+fi
+
+
+# more then 2 input parameter
+if [ $# -gt 1 ]; then
     	usage
         exit
-    fi
+fi
 
-    
-    if [ $# = 1 ]; then
-        if [ "$1" -gt 0 ] 2>/dev/null ; then
-            board_op reboot
+#
+if [ $# = 1 ]; then
+	if [ "$1" -gt 0 ] 2>/dev/null ; then
+           	 board_op reboot
         else
-            case $1 in
-            "on"|"off"|"reboot")
+            	case $1 in
+            	"on"|"off"|"reboot")
                 board_op $1
                 ;;
-            *)
+            	*)
                 usage
                 ;;
-            esac
-        fi
-        exit
-    fi
+            	esac
+       	 fi
+         exit
 fi
+
 
 #default to reboot board1
 board_op reboot
+
+
+

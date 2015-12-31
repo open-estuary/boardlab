@@ -16,6 +16,7 @@ usage()
 
 declare board_using=0
 declare board_user="no user"
+declare board_type="D02"
 using_check()
 {
  	current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd|grep telnet |grep -w $1|cut -d " " -f1`
@@ -29,6 +30,7 @@ using_check()
 		board_user="$current"
     	fi
 }
+ 
 
 check_neccessary()
 {
@@ -78,7 +80,8 @@ function show_confirm()
 	esac
 }
 
-connect()
+# include d01 d02 1610 expander and others board without BMC
+connect_board_others()
 {
      using_check $1
      if [ $board_using = 1 ];then
@@ -106,6 +109,13 @@ connect()
     exit 0
 }
 
+# connect d03 and board such as d03 with BMC
+connect_board_d03()
+{
+	ipmitool -H $BMCIP -I lanplus -U "root" -P "Huawei12#$" sol activate
+}
+
+
 if [ x"$#" = x"1" -a x"$1" = x"-h" ]; then
     usage
     exit
@@ -125,4 +135,13 @@ if [ $# -gt 0 ]; then
     fi
 fi
 
-connect $PORT
+# connect boards
+if [ $BOARDTYPE = "D03" ];then
+	connect_board_d03
+else 
+	connect_board_others $PORT
+	#connect $PORT
+fi
+
+
+
