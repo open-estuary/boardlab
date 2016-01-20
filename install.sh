@@ -24,6 +24,14 @@ if [ ! -f "$CFGPATH/users.cfg" ]; then
     cp users.cfg $CFGPATH/
 fi
 
+if [ ! -f "$CFGPATH/serial.cfg" ]; then
+    cp serial.cfg $CFGPATH/
+fi
+
+if [ ! -f "$CFGPATH/power.cfg" ]; then
+    cp power.cfg $CFGPATH/
+fi
+
 if [ ! -f "$CFGPATH/boardlab.cfg" ]; then
     cp boardlab.cfg $CFGPATH/
 fi
@@ -42,7 +50,7 @@ cp cp_rootfs.sh $BINPATH
 cp gencfg.sh $BINPATH
 cp inituser $BINPATH
 cp newuser $BINPATH
-
+cp board_op $BINPATH
 . $CFGPATH/boardlab.cfg
 
 mkdir -p $ftp_dir 2>/dev/null
