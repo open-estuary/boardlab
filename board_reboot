@@ -4,97 +4,117 @@
 #Description: this is the pdu control script
 #
 
+
 . check_board
-POWER_CMD=ap7921-control
+source board_op
 
-# Get the power controller information
-powerinfo=`grep -w "$POWER:" $BOARDCFG`
-PDU_HOST=${powerinfo#*ip=}
-PDU_HOST=${PDU_HOST%%,*}
-
+# Usage information 
 usage()
 {
     echo "Usage: board_reboot [Num] [on|off|reboot]"
-    echo "To power on, off or reboot specify boards, default to reboot board1 without any parameters!"
-    echo "    Num:            To operate the specified board assigned to user, Num is an interger board index which must be greater than 0, default to operate board1."
+    echo "To power on, off or reboot specify boards, default to reboot board num=1 without any parameters!"
+    echo "    Num:            To operate the specified board assigned to user, Num is an interger board index which must be greater than 0, default to operate board num=1."
     echo "    on|off|reboot:  To specify a power operation, default to reboot."
     exit 0
 } 
 
+
+
+# befre you operating power on board,need to check the board is used or not.
+# if not be used ,then you can operate power.
+# if it is using, there is two different cases, the one is you had already connected is,so you do it.
+# if it is used by other user, you can't do it .
 board_op()
 {
-	OPER=3
-
-	case $1 in 
-	"on")
-		OPER=1
-		;;
-	"off")
-		OPER=2
-		;;
-	"reboot")
-		OPER=3
-		;;
-	*)
-		usage
-        exit
-		;;
-	esac
-
-# Check the whether the board is being used, and send the operation command
-    current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd | grep telnet | grep $PORT | cut -d " " -f1`
-    current=`echo $current|cut -d "+" -f1`
+    # Check the whether the board is being used, and send the operation command
+    if [ "$SERIALTYPE" = "ipmi" ]; then
+        current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd | grep $SERIALTYPE | grep $BMCIP | cut -d " " -f1`
+    elif [ "$SERIALTYPE" = "telnet" ]; then
+	current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd  | grep $SERIALTYPE | grep $PORT | cut -d " " -f1`
+    fi
+    
     if [ "$current" = "" ];then
-	    $POWER_CMD $PDU_HOST $OUTLET $OPER
-		echo ""
+        board_op_power $1	
+	echo ""
     else
-        current_user=`grep -w $current $USERCFG|cut -d ":" -f1`
+        current_user=`grep -w $current $USERCFG | cut -d ":" -f1`
         if [ "$current_user" = "$USERNAME" ];then
-	        $POWER_CMD $PDU_HOST $OUTLET $OPER
-			echo ""
+	    board_op_power $1
         else
             email=`grep -w $current $USERCFG`
             email=${email#*email=}
             email=${email%%,*}
             echo "              ********WARNING********"
-            echo "  $email is using the board on $PORT"
+            echo "  $email is using the board"
             echo "  Please wait until he/she  finishes the work"
             echo "  Or you can contact with him by email."
         fi
-    fi
-	exit 0
+     fi
 }
 
-if [ $# = 2 ]; then
-    if [ "$1" -gt 0 ] 2>/dev/null ; then
-        board_op $2
-    else
-        usage
-    fi
-    exit
-else 
-    if [ $# -gt 1 ]; then
-    	usage
-        exit
-    fi
 
-    
-    if [ $# = 1 ]; then
-        if [ "$1" -gt 0 ] 2>/dev/null ; then
-            board_op reboot
-        else
-            case $1 in
-            "on"|"off"|"reboot")
-                board_op $1
-                ;;
-            *)
-                usage
-                ;;
-            esac
-        fi
-        exit
-    fi
+
+
+# according to the parameter num to take different operate
+# if num=0, the cmd like board_reboot,the default is reboot the board num=1
+# if num=1, the cmd like this: board_reboot num(board num) or board_reboot on|off|reboot(defaul operation board num=1) 
+# if num=2, the cmd like this: board_num on|off|reboot
+# else ,the cmd is wrong
+
+if [ $# = 0 ]; then
+    board_op reboot
+    exit
+elif [ $# = 1 ]; then
+    if [ "$1" -gt 0 ] 2>/dev/null; then
+        board_op reboot
+    else
+        case $1 in
+	"on"|"off"|"reboot")
+	    board_op $1
+	    ;;
+        *)
+	    usage
+            ;;
+         esac
+     fi
+     exit
+elif [ $# = 2 ]; then
+    if [ $1 -gt 0 ] 2>/dev/null; then
+        case $2 in
+	"on"|"off"|"reboot")
+	    board_op $2
+            ;;
+        *)
+            usage
+            ;;
+         esac
+     fi
+else
+    usage
 fi
 
-#default to reboot board1
-board_op reboot
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,77 @@
+#!/bin/bash
+#author: Alan Huang, Justin Zhao
+#date 12/10/2015
+#Description: this is the pdu control script
+#
+
+
+
+
+# take power action,
+# the parameter is pud_ip, pdu outlet and operation on:1,off=2,reboot=3
+# include d01 d02 1610 and other boards without BMC
+board_op_power_pdu()
+{
+    OPER=3
+    case $1 in 
+    "on")
+	OPER=1
+	;;
+    "off")
+	OPER=2
+	;;
+    "reboot")
+	OPER=3
+	;;
+    *)
+	usage
+    exit
+ 	;;
+    esac
+    # power on board
+    $POWER_CMD $PDU_HOST $OUTLET $OPER
+    echo ""  
+}
+
+
+
+
+# power option:  boards wiht BMC,such as d03
+# 
+board_op_power_bmc()
+{
+    # action on power
+    case $1 in 
+    "on" | "off" )
+         ipmitool -H $BMCIP -I $IPMI_INTERFACE -U $ACCOUNT -P $PASSWORD $IPMI_POWER_CMD $1 
+         ;;
+    "reboot")
+         ipmitool -H $BMCIP -I $IPMI_INTERFACE -U $ACCOUNT -P $PASSWORD $IPMI_POWER_CMD off 
+         sleep 3
+         ipmitool -H $BMCIP -I $IPMI_INTERFACE -U $ACCOUNT -P $PASSWORD $IPMI_POWER_CMD on 
+         ;;
+    *)
+         usage
+         ;;
+    esac
+}
+
+
+# according to SERIALTYPE and POWERTYPE to take different function
+#
+board_op_power()
+{
+    if [ "$SERIALTYPE" = "ipmi" -a "$POWERTYPE" = "BMC" ]; then
+       board_op_power_bmc $1
+
+    elif [ "$SERIALTYPE" = "telnet" -a "$POWERTYPE" = "PDU" ]; then
+	board_op_power_pdu $1
+    #elif ...
+    fi
+}
+
+
+
+
+
+

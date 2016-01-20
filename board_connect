@@ -5,21 +5,85 @@
 
 . check_board
 
+
 # Usage information
 usage()
 {
     echo "Usage: board_connect [Num]"
     echo "    -h     : Display this information"
     echo "    Num    : To use the specified board assigned to user, Num is an interger board index which must be greater than 0, default to use No.1 board."
-	exit
+    exit
 }
 
-declare board_using=0
-declare board_user="no user"
+
+# check the some file in path:~/ftp   
+# if not exist, copy from back path, and use default files
+# and when take board_connet cmd the ~/grub.cfg will replace the /home/hisilicon/ftp/grub.cfg-01-$mac file
+check_neccessary()
+{
+    BAK_PATH=$ftp_dir/$ftp_bak
+    if [ x"$BOARDTYPE" = x"D01" ];then
+        IMG=$img_d01
+        DTB=$dtb_d01
+    elif [ x"$BOARDTYPE" = x"D02" ];then
+        IMG=$img_d02
+        DTB=$dtb_d02
+    elif [ x"$BOARDTYPE" = x"D03" ];then
+        IMG=$img_d03
+        DTB=$dtb_d03
+    fi
+    CPIO=$mini_rootfs
+
+    if [ ! -f ~/ftp/$IMG ] ;then
+	cp $BAK_PATH/$IMG ~/ftp/
+    fi 
+    if [ ! -f ~/ftp/$DTB ];then
+	cp $BAK_PATH/$DTB ~/ftp/
+    fi
+    if [ ! -f ~/ftp/$CPIO ];then
+	cp $BAK_PATH/$CPIO ~/ftp/	
+    fi
+	
+    if [ ! -f ${DEFCFG} ]; then
+	gencfg.sh
+    fi
+    cp ${DEFCFG} $GRUBFILE
+    chmod 0666 $GRUBFILE
+}
+
+
+
+# if user had already connected. and the want to connect board at other place
+# so user need kill provious process
+function show_confirm()
+{
+    read -n1 -p "Do you want to kill it and try a new session [Y/N]?" answer
+    case $answer in
+    Y | y)
+        echo  -e "\n fine ,continue"
+	;;
+    N | n)
+        echo -e "\n ok,good bye"
+	exit 0
+	;;
+    *)
+        echo -e  "\n Sorry! Error choice"
+        exit 0
+    ;;
+    esac
+}
+
+
+# befre you operating  power on board,need to check the board if is used
+# if not be used ,then you can take power action
+# if it is using, there is two different cases, the one is you had already connected is,so you do it
+# if it is used by other user, you can't do it 
 using_check()
 {
- 	current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd|grep telnet |grep -w $1|cut -d " " -f1`
- 	psid=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd |grep -w $1|awk '{print $2}'`
+        board_using=0
+	board_user="no user"
+	current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd | grep $1 |grep -w $2 | cut -d " " -f1`
+ 	psid=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd | grep $1 |grep -w $2 | awk '{print $2}'`
 	current=`echo $current|cut -d "+" -f1`
 	echo "psid is $psid"
 	if [ "$current" = "" ];then
@@ -27,102 +91,91 @@ using_check()
     	else
        		board_using=1
 		board_user="$current"
-    	fi
+        fi
+        if [ $board_using = 1 ];then
+            usinginfo=`grep -w "$board_user:" $USERCFG`
+            mail_addr=${usinginfo#*email=}
+            mail_addr=${mail_addr%%,*}
+            mail_user=${usinginfo%%:*}
+   	    if [ "$USERNAME" = "$mail_user" ];then
+                echo "You are using another session connected to the board"
+     	        show_confirm
+     	        echo "kill the ps $psid"
+     	        kill $psid
+                if [ "$SERIALTYPE" = "ipmi" ]; then
+                   echo "please wait 60 second,then connect again" 
+                   echo " "
+                fi
+     	    else
+                echo "$mail_addr is using the board "
+                echo "if you really want to use it, please contact with him"
+                exit 1
+            fi
+         fi
 }
 
-check_neccessary()
+ 
+
+# include d01 d02 1610 expander and others board without BMC
+# connect board
+connect_board_op_pdu()
 {
-    BAK_PATH=$ftp_dir/$ftp_bak
-
-    if [ x"$BOARDTYPE" = x"D01" ];then
-        IMG=$img_d01
-        DTB=$dtb_d01
-    else
-        IMG=$img_d02
-        DTB=$dtb_d02
-    fi
-
-    CPIO=$mini_rootfs
-
-	if [ ! -f ~/ftp/$IMG ] ;then
-		cp $BAK_PATH/$IMG ~/ftp/
-	fi 
-	if [ ! -f ~/ftp/$DTB ];then
-		cp $BAK_PATH/$DTB ~/ftp/
-	fi
-	if [ ! -f ~/ftp/$CPIO ];then
-		cp $BAK_PATH/$CPIO ~/ftp/	
-	fi
-	
-	if [ ! -f ${DEFCFG} ]; then
-		gencfg.sh
-	fi
-    cp ${DEFCFG} $GRUBFILE
-}
-
-function show_confirm()
-{
-	read -n1 -p "Do you want to kill it and try a new session [Y/N]?" answer
-	case $answer in
-	Y | y)
-     echo  -e "\n fine ,continue"
-	;;
-	N | n)
-    echo -e "\n ok,good bye"
-	exit 0
-	;;
-	*)
- 	echo -e  "\n Sorry! Error choice"
-	exit 0
-	;;
-	esac
-}
-
-connect()
-{
-     using_check $1
-     if [ $board_using = 1 ];then
-         usinginfo=`grep -w "$board_user:" $USERCFG`
-         mail_addr=${usinginfo#*email=}
-         mail_addr=${mail_addr%%,*}
-         mail_user=${usinginfo%%:*}
-     	if [ "$USERNAME" = "$mail_user" ];then
-     		echo "You are using another session connected to the board"
-     		show_confirm
-     		echo "kill the ps $psid"
-     		kill $psid
-     	else
-         	echo "$mail_addr is using the board on $2"
-         	echo "if you really want to use it, please contact with him"
-        		exit 1
-     	fi
-    fi
-
+    using_check $SERIALTYPE $PORT
     check_neccessary
-	echo -e "\033[0m"
-	echo -e "\033[32mConnected to board: No=$BOARDIDX, type=$BOARDTYPE, port=$PORT, power=$POWER $OUTLET, grub=$GRUBFILE.\033[0m"
-    telnet localhost $1
-    
+    echo -e "\033[0m"
+    echo -e "\033[32mConnected to board: No=$BOARDIDX, type=$BOARDTYPE, port=$PORT, power=$POWER $OUTLET, grub=$GRUBFILE.\033[0m"
+    echo "exec telnet $MANAGER_SERVER_IP $PORT"
+    exec telnet $MANAGER_SERVER_IP $PORT
     exit 0
 }
 
-if [ x"$#" = x"1" -a x"$1" = x"-h" ]; then
+
+
+# connect board with bmc ,such as d03 
+connect_board_op_bmc()
+{
+    using_check $SERIALTYPE $BMCIP
+    check_neccessary
+    ipmitool -H $BMCIP -I $IPMI_INTERFACE -U $ACCOUNT -P $PASSWORD $IPMI_SERIAL_CMD
+    exit 0 
+}
+
+# according to SERIALTYPE and POWERTYPE to chose diffrent connect way
+connect_board_op()
+{
+    # connect boards
+    if [ "$SERIALTYPE" = "ipmi" -a "$POWERTYPE" = "BMC"  ]; then
+	connect_board_op_bmc
+    elif [ "$SERIALTYPE" = "telnet" -a "$POWERTYPE" = "PDU"  ]; then
+        connect_board_op_pdu 
+    fi
+    exit
+}
+
+
+
+# if the cmd board_connet not with parameter,$#=0:the default operation is connect board
+# if the parameter num=1: there is three cases, one is  "board_connect -h" show the usage, the second one is "board_connec num" to connect board num.(if the num is wrong at check_board script will prompt)
+# the third one is: other all wrong parameter case
+# if more than one parameter,then show usage message
+if [ $# = 0 ]; then
+    connect_board_op
+elif [ x"$#" = x"1" ]; then
+    if [ x"$1" = x"-h" ]; then
+        usage
+        exit
+    elif [ $1 -gt 0 ]; then
+        connect_board_op
+    else 
+	usage
+        exit
+    fi
+elif  [ $# > 1  ]; then
     usage
     exit
 fi
 
-if [ $# -gt 0 ]; then
-    showhelp=1
-    if [ $# = 1 ]; then
-        if [ "$1" -gt 0 ] 2>/dev/null ; then 
-            showhelp=0 
-        fi
-    fi
 
-    if [ $showhelp = 1 ];then
-        usage
-        exit
-    fi
-fi
 
-connect $PORT
+
+
