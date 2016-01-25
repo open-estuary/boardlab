@@ -6,10 +6,11 @@
 USERCFG=/etc/boardlab/users.cfg
 USERLOG=/var/log/login.log
 BOARDCFG=/etc/boardlab/boards.cfg
+PDUCFG=/etc/boardlab/pdu.cfg
+BMCCFG=/etc/boardlab/bmc.cfg
 LABCFG=/etc/boardlab/boardlab.cfg
 
 USERNAME=`whoami`
-#. $BOARDCFG
 . $LABCFG
 
 # Check whether user in permit list
@@ -31,23 +32,23 @@ userinfo=`grep -w "$USERNAME:" $USERCFG`
 boards=${userinfo#*boards=}
 
 if [ x"boardslist" = x"$1" ]; then
-	echo "${USERNAME} possessed boards list:"
-	echo "Idx: Board No -> Shared Users"
-	idx=1
-	while [ true ]
-	do
-		boardno=`echo ${boards%%,*} | cut -d " " -f$idx`
-		if [ x"" = x"$boardno" ]; then
-			exit 0
-		fi
-		shared=`grep -E "boards=.*\b${boardno}\b" $USERCFG | grep -v "${USERNAME}:" | cut -d "," -f1 | sed "s/email=//g" | tr '\n' ";"|sed "s/;/; /g"`
-		if [ x"" = x"$shared" ]; then
-			echo "${idx}  : ${boardno}"
-		else
-			echo "${idx}  : ${boardno} -> ${shared}"
-		fi
-		let idx=$idx+1
-	done
+    echo "${USERNAME} possessed boards list:"
+    echo "Idx: Board No -> Shared Users"
+    idx=1
+    while [ true ]
+    do
+	boardno=`echo ${boards%%,*} | cut -d " " -f$idx`
+	if [ x"" = x"$boardno" ]; then
+		exit 0
+	fi
+	shared=`grep -E "boards=.*\b${boardno}\b" $USERCFG | grep -v "${USERNAME}:" | cut -d "," -f1 | sed "s/email=//g" | tr '\n' ";"|sed "s/;/; /g"`
+	if [ x"" = x"$shared" ]; then
+		echo "${idx}  : ${boardno}"
+	else
+		echo "${idx}  : ${boardno} -> ${shared}"
+	fi
+	let idx=$idx+1
+    done
 fi
 
 BOARDIDX=`echo ${boards%%,*} | cut -d " " -f$BOARDIDX`
@@ -63,6 +64,7 @@ if [ $? != 0 ];then
     exit 1
 fi
 
+
 # Get the email of user
 #eval PORT=$((PORT$index))
 EMAIL=${userinfo#*email=}
@@ -70,25 +72,28 @@ EMAIL=${EMAIL%%,*}
 
 # Get the board information
 boardinfo=`grep -w "BOARD$BOARDIDX:" $BOARDCFG`
-PORT=${boardinfo#*ser2net=}
-PORT=${PORT%%,*}
-
-BOARDTYPE=${boardinfo#*type=}
+BOARDTYPE=${boardinfo#*boardtype=}
 BOARDTYPE=${BOARDTYPE%%,*}
 
-GRUBFILE=${boardinfo#*mac=}
-GRUBFILE=${GRUBFILE%%,*}
-GRUBFILE=$ftp_dir/$grub_prefix"-"$GRUBFILE
+SERIALTYPE=${boardinfo#*serialtype=}
+SERIALTYPE=${SERIALTYPE%%,*}
 
-POWER=${boardinfo#*power=}
-POWER=${POWER%%,*}
+POWERTYPE=${boardinfo#*powertype=}
+POWERTYPE=${POWERTYPE%%,*}
 
-OUTLET=`echo $POWER | cut -d " " -f2`
-POWER=`echo $POWER | cut -d " " -f1`
+CONFIGINFO=${boardinfo#*configinfo=}
+CONFIGINFO=${CONFIGINFO%%,*}
 
-# Check whether the power controller is deployed
-grep -w "$POWER:" $BOARDCFG >/dev/null 2>&1
-if [ $? != 0 ];then
-    echo "Power$BOARDIDX is not deployed into Open Lab, please touch the Lab. manager."
-    exit 1
-fi
+MAC=${boardinfo#*mac=}
+MAC=${MAC%%,*}
+GRUBFILE=$ftp_dir/$grub_prefix-$MAC
+
+
+
+
+
+
+
+
+
+
