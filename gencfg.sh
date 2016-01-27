@@ -21,7 +21,7 @@ menuentry \"minilinux\" --id minilinux {
 menuentry \"Ubuntu D02\" --id ubuntu_d02 {
     set root=(tftp,$SVRIP)
     linux /$USER/$img_d02 rdinit=/init console=ttyS0,115200 earlycon=uart8250,mmio32,0x80300000 root=/dev/nfs rw nfsroot=$SVRIP:$ftp_dir/$USER/ubuntu ip=dhcp
-    devicetree /$USER/$dtb_d02
+    
 }
 
 menuentry \"Ubuntu D01\" --id ubuntu_d01 {

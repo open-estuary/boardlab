@@ -1,0 +1,73 @@
+#!/bin/bash
+#author: Alan Huang, Justin Zhao
+#date 12/10/2015
+#Description: this is the pdu control script
+
+
+
+# check and get pdu config parameter
+get_pdu_config()
+{
+    pdu_serial=`grep -w "$CONFIGINFO:" $PDUCFG`
+    if [ $? -ne 0 ]; then
+	# Check whether the power controller is deployed
+	echo "$CONFIGINFO not config or configure is wrong, please touch lab Manager"
+	exit 1
+    fi
+
+    if [ x"$1" = x"board_connet" ]; then
+        PORT=${pdu_serial#*port=}
+        PORT=${PORT%%,*}
+        MANAGER_SERVER_IP=${pdu_serial#*manager_server_ip=}
+        MANAGER_SERVER_IP=${MANAGER_SERVER_IP%%,*}    
+    elif [ x"$1" = x"board_reboot" ]; then
+	PDU_POWER_CMD=ap7921-control
+        POWER=${pdu_serial#*power=}
+        POWER=${POWER%%,*}
+        OUTLET=`echo $POWER | cut -d " " -f2`
+        POWER=`echo $POWER | cut -d " " -f1`
+	powerinfo=`grep -w "$POWER:" $PDUCFG`
+        PDU_HOST=${powerinfo#*ip=}
+        PDU_HOST=${PDU_HOST%%,*}
+    fi
+}
+
+
+
+# check and get bmc config parameter
+get_bmc_config()
+{
+   bmcinfo=`grep -w "$CONFIGINFO:" $BMCCFG`
+   if [ $? -ne 0 ];then
+	# Check whether the power controller is deployed
+        echo "$CONFIGINFO is not config or config is wrong, please touch lab Manager."
+        exit 1
+    fi
+    BMCIP=${bmcinfo#*bmcip=}
+    BMCIP=${BMCIP%%,*}
+
+    IPMI_INTERFACE=${bmcinfo#*ipmi_interface=}
+    IPMI_INTERFACE=${IPMI_INTERFACE%%,*}
+ 
+    ACCOUNT=${bmcinfo#*account=}
+    ACCOUNT=${ACCOUNT%%,*}
+
+    PASSWORD=${bmcinfo#*password=}
+    PASSWORD=${PASSWORD%%,*}
+
+    if [ x"$1" = x"board_connet" ]; then
+        IPMI_SERIAL_CMD=${bmcinfo#*ipmi_serial_cmd=}
+        IPMI_SERIAL_CMD=${IPMI_SERIAL_CMD%%,*}
+    elif [ x"$1" = x"board_reboot" ]; then
+        IPMI_POWER_CMD=${bmcinfo#*ipmi_power_cmd=}
+        IPMI_POWER_CMD=${IPMI_POWER_CMD%%,*}
+    fi
+}
+
+
+
+
+
+
+
+
