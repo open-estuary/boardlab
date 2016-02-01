@@ -4,12 +4,14 @@
 #description: connect the UART port of user's board by telnet
 
 USERCFG=/etc/boardlab/users.cfg
+LABCFG=/etc/boardlab/boardlab.cfg
 USERLOG=/var/log/login.log
 BOARDCFG=/etc/boardlab/boards.cfg
-LABCFG=/etc/boardlab/boardlab.cfg
+PDUCFG=/etc/boardlab/pdu.cfg
+BMCCFG=/etc/boardlab/bmc.cfg
+SERIALCFG=/etc/boardlab/serial.cfg
 
 USERNAME=`whoami`
-#. $BOARDCFG
 . $LABCFG
 
 # Check whether user in permit list
@@ -31,24 +33,25 @@ userinfo=`grep -w "$USERNAME:" $USERCFG`
 boards=${userinfo#*boards=}
 
 if [ x"boardslist" = x"$1" ]; then
-	echo "${USERNAME} possessed boards list:"
-	echo "Idx: Board No -> Shared Users"
-	idx=1
-	while [ true ]
-	do
-		boardno=`echo ${boards%%,*} | cut -d " " -f$idx`
-		if [ x"" = x"$boardno" ]; then
-			exit 0
-		fi
-		shared=`grep -E "boards=.*\b${boardno}\b" $USERCFG | grep -v "${USERNAME}:" | cut -d "," -f1 | sed "s/email=//g" | tr '\n' ";"|sed "s/;/; /g"`
-		if [ x"" = x"$shared" ]; then
-			echo "${idx}  : ${boardno}"
-		else
-			echo "${idx}  : ${boardno} -> ${shared}"
-		fi
-		let idx=$idx+1
-	done
+    echo "${USERNAME} possessed boards list:"
+    echo "Idx: Board No -> Shared Users"
+    idx=1
+    while [ true ]
+    do
+	boardno=`echo ${boards%%,*} | cut -d " " -f$idx`
+	if [ x"" = x"$boardno" ]; then
+		exit 0
+	fi
+	shared=`grep -E "boards=.*\b${boardno}\b" $USERCFG | grep -v "${USERNAME}:" | cut -d "," -f1 | sed "s/email=//g" | tr '\n' ";"|sed "s/;/; /g"`
+	if [ x"" = x"$shared" ]; then
+		echo "${idx}  : ${boardno}"
+	else
+		echo "${idx}  : ${boardno} -> ${shared}"
+	fi
+	let idx=$idx+1
+    done
 fi
+
 
 BOARDIDX=`echo ${boards%%,*} | cut -d " " -f$BOARDIDX`
 if [ x"" = x"$BOARDIDX" ]; then
@@ -56,12 +59,15 @@ if [ x"" = x"$BOARDIDX" ]; then
     exit 1
 fi
 
+
 # Check whether the board is deployed
-grep -w "BOARD$BOARDIDX:" $BOARDCFG >/dev/null 2>&1
+BOARDNUM="BOARD$BOARDIDX"
+grep -w "$BOARDNUM:" $BOARDCFG >/dev/null 2>&1
 if [ $? != 0 ];then
-    echo "Board$BOARDIDX is not deployed into Open Lab, please touch the Lab. manager."
+    echo "$BOARDNUM is not deployed into Open Lab, please touch the Lab. manager."
     exit 1
 fi
+
 
 # Get the email of user
 #eval PORT=$((PORT$index))
@@ -69,26 +75,31 @@ EMAIL=${userinfo#*email=}
 EMAIL=${EMAIL%%,*}
 
 # Get the board information
-boardinfo=`grep -w "BOARD$BOARDIDX:" $BOARDCFG`
-PORT=${boardinfo#*ser2net=}
-PORT=${PORT%%,*}
-
-BOARDTYPE=${boardinfo#*type=}
+boardinfo=`grep -w "$BOARDNUM:" $BOARDCFG`
+BOARDTYPE=${boardinfo#*boardtype=}
 BOARDTYPE=${BOARDTYPE%%,*}
+
+SERIALINFO=${boardinfo#*serialinfo=}
+SERIALINFO=${SERIALINFO%%,*}
+SERIALTYPE=`echo $SERIALINFO | sed 's/[0-9]*//g'`
 
 GRUBFILE=${boardinfo#*mac=}
 GRUBFILE=${GRUBFILE%%,*}
 GRUBFILE=$ftp_dir/$grub_prefix"-"$GRUBFILE
 
-POWER=${boardinfo#*power=}
-POWER=${POWER%%,*}
+POWERINFO=${boardinfo#*powerinfo=}
+POWERINFO=${POWERINFO%%,*}
+POWERINFO=`echo "$POWERINFO" | cut -d " " -f1`
+OUTLEN=`echo "$POWERINFO" | cut -d " " -f2` 
+POWERTYPE=`echo $POWERINFO | sed 's/[0-9]*//g'`
 
-OUTLET=`echo $POWER | cut -d " " -f2`
-POWER=`echo $POWER | cut -d " " -f1`
 
-# Check whether the power controller is deployed
-grep -w "$POWER:" $BOARDCFG >/dev/null 2>&1
-if [ $? != 0 ];then
-    echo "Power$BOARDIDX is not deployed into Open Lab, please touch the Lab. manager."
-    exit 1
-fi
+
+
+
+
+
+
+
+
+
