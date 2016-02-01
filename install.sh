@@ -8,6 +8,7 @@ BINPATH="/usr/bin"
 
 apt-get install ser2net -y
 apt-get install expect-lite -y
+apt-get install ipmitool -y
 
 PRJDIR="`dirname $0`"
 cd $PRJDIR
@@ -21,6 +22,18 @@ fi
 
 if [ ! -f "$CFGPATH/users.cfg" ]; then
     cp users.cfg $CFGPATH/
+fi
+
+if [ ! -f "$CFGPATH/pdu.cfg" ]; then
+    cp pdu.cfg $CFGPATH/
+fi
+
+if [ ! -f "$CFGPATH/bmc.cfg" ]; then
+    cp bmc.cfg $CFGPATH/
+fi
+
+if [ ! -f "$CFGPATH/serial.cfg" ]; then
+    cp serial.cfg $CFGPATH/
 fi
 
 if [ ! -f "$CFGPATH/boardlab.cfg" ]; then
@@ -41,7 +54,8 @@ cp cp_rootfs.sh $BINPATH
 cp gencfg.sh $BINPATH
 cp inituser $BINPATH
 cp newuser $BINPATH
-
+cp power_op $BINPATH
+cp pulic_op $BINPATH
 . $CFGPATH/boardlab.cfg
 
 mkdir -p $ftp_dir 2>/dev/null
@@ -51,6 +65,8 @@ cp $img_d01 $ftp_dir/$ftp_bak/
 cp $dtb_d01 $ftp_dir/$ftp_bak/
 cp $img_d02 $ftp_dir/$ftp_bak/
 cp $dtb_d02 $ftp_dir/$ftp_bak/
+cp $img_d03 $ftp_dir/$ftp_bak/
+cp $dtb_d03 $ftp_dir/$ftp_bak/
 cp $mini_rootfs $ftp_dir/$ftp_bak/
 
 grep "inituser" /etc/skel/.bashrc >/dev/null

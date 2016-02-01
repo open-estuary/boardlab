@@ -1,0 +1,50 @@
+#!/bin/bash
+
+
+
+
+check_use_status()
+{
+    # Get the board information
+    boardinfo=`grep -w "$BOARDNUM:" $BOARDCFG`
+    PORT=${boardinfo#*ser2net=}
+    PORT=${PORT%%,*}
+    current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd|grep telnet |grep -w $1|cut -d " " -f1`
+}
+
+
+
+
+# check and get bmc config parameter
+get_bmc_config()
+{
+   bmcinfo=`grep -w "$POWERINFO:" $BMCCFG`
+   if [ $? -ne 0 ];then
+	# Check whether the power controller is deployed
+        echo "$CONFIGINFO is not config or config is wrong, please touch lab Manager."
+        exit 1
+    fi
+    BMCIP=${bmcinfo#*bmcip=}
+    BMCIP=${BMCIP%%,*}
+
+    IPMI_INTERFACE=${bmcinfo#*ipmi_interface=}
+    IPMI_INTERFACE=${IPMI_INTERFACE%%,*}
+ 
+    ACCOUNT=${bmcinfo#*account=}
+    ACCOUNT=${ACCOUNT%%,*}
+
+    PASSWORD=${bmcinfo#*password=}
+    PASSWORD=${PASSWORD%%,*}
+
+    if [ x"$1" = x"board_connet" ]; then
+        IPMI_SERIAL_CMD=${bmcinfo#*ipmi_serial_cmd=}
+        IPMI_SERIAL_CMD=${IPMI_SERIAL_CMD%%,*}
+    elif [ x"$1" = x"board_reboot" ]; then
+        IPMI_POWER_CMD=${bmcinfo#*ipmi_power_cmd=}
+        IPMI_POWER_CMD=${IPMI_POWER_CMD%%,*}
+    fi
+}
+
+
+
+
