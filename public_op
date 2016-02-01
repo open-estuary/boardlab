@@ -1,0 +1,69 @@
+#!/bin/bash
+# power and connect  use 
+
+
+
+# check board using status
+check_use_status()
+{
+    if [ "$2" = "board_connect" ]; then
+	if [ "$SERIALINFO" = "TELNET" ]; then
+            get_pdu_serial_config
+	    current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd | grep telnet | grep -w $PORT |cut -d " " -f1`
+ 	    psid=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd |grep telnet |grep -w $PORT |awk '{print $2}'`
+	    
+	elif [ "$SERIALINFO" = "BMC" ]; then
+	    get_bmc_config
+	    current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd | grep ipmitool | grep -w $BMCIP |cut -d " " -f1`
+ 	    psid=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd |grep ipmitool |grep -w $BMCIP |awk '{print $2}'`
+	if
+    elif [ "$2" = "board_reboot" ]; then
+	if [ "$POWERINFO" = "PDU" ]; then
+	    get_pdu_serial_config
+	    current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd | grep telnet | grep -w $PORT |cut -d " " -f1`
+ 	    psid=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd |grep telnet |grep -w $PORT |awk '{print $2}'`
+	elif [ "$POWERINFO" = "BMC" ]; then
+	    get_bmc_config
+	    current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd | grep ipmitool | grep -w $BMCIP |cut -d " " -f1`
+ 	    psid=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd |grep ipmitool |grep -w $BMCIP |awk '{print $2}'`	
+	if	
+    fi
+}
+
+
+
+
+# check and get bmc config parameter
+get_bmc_config()
+{
+   bmcinfo=`grep -w "$POWERINFO:" $BMCCFG`
+   if [ $? -ne 0 ];then
+	# Check whether the power controller is deployed
+        echo "$CONFIGINFO is not config or config is wrong, please touch lab Manager."
+        exit 1
+    fi
+    BMCIP=${bmcinfo#*bmcip=}
+    BMCIP=${BMCIP%%,*}
+
+    IPMI_INTERFACE=${bmcinfo#*ipmi_interface=}
+    IPMI_INTERFACE=${IPMI_INTERFACE%%,*}
+ 
+    ACCOUNT=${bmcinfo#*account=}
+    ACCOUNT=${ACCOUNT%%,*}
+
+    PASSWORD=${bmcinfo#*password=}
+    PASSWORD=${PASSWORD%%,*}
+
+    if [ x"$1" = x"board_connet" ]; then
+        IPMI_SERIAL_CMD=${bmcinfo#*ipmi_serial_cmd=}
+        IPMI_SERIAL_CMD=${IPMI_SERIAL_CMD%%,*}
+    elif [ x"$1" = x"board_reboot" ]; then
+        IPMI_POWER_CMD=${bmcinfo#*ipmi_power_cmd=}
+        IPMI_POWER_CMD=${IPMI_POWER_CMD%%,*}
+    fi
+}
+
+
+
+
+

@@ -1,0 +1,133 @@
+#!/bin/bash
+
+
+source public_op
+
+
+# Usage information
+usage()
+{
+    echo "Usage: board_connect [Num]"
+    echo "    -h     : Display this information"
+    echo "    Num    : To use the specified board assigned to user, Num is an interger board index which must be greater than 0, default to use No.1 board."
+    exit
+}
+
+
+
+# check and get pdu config parameter
+get_pdu_serial_config()
+{
+    pdu_serial=`grep -w "$SERIALINFO:" $SERIALCFG`
+    if [ $? -ne 0 ]; then
+	# Check whether the power controller is deployed
+	echo "$SERIALIFNOINFO not config or configure is wrong, please touch lab Manager"
+	exit 1
+    fi
+    PORT=${pdu_serial#*port=}
+    PORT=${PORT%%,*}
+    MANAGER_SERVER_IP=${pdu_serial#*manager_server_ip=}
+    MANAGER_SERVER_IP=${MANAGER_SERVER_IP%%,*}    
+}
+
+
+
+# check the some file in path:~/ftp   
+# if not exist, copy from back path, and use default files
+# and when take board_connet cmd the ~/grub.cfg will replace the /home/hisilicon/ftp/grub.cfg-01-$mac file
+check_neccessary()
+{
+    BAK_PATH=$ftp_dir/$ftp_bak
+    if [ x"$BOARDTYPE" = x"D01" ];then
+        IMG=$img_d01
+        DTB=$dtb_d01
+    elif [ x"$BOARDTYPE" = x"D02" ];then
+        IMG=$img_d02
+        DTB=$dtb_d02
+    elif [ x"$BOARDTYPE" = x"D03" ];then
+        IMG=$img_d03
+        DTB=$dtb_d03
+    fi
+    CPIO=$mini_rootfs
+
+    if [ ! -f ~/ftp/$IMG ] ;then
+	cp $BAK_PATH/$IMG ~/ftp/
+    fi 
+    if [ ! -f ~/ftp/$DTB ];then
+	cp $BAK_PATH/$DTB ~/ftp/
+    fi
+    if [ ! -f ~/ftp/$CPIO ];then
+	cp $BAK_PATH/$CPIO ~/ftp/	
+    fi
+	
+    if [ ! -f ${DEFCFG} ]; then
+	gencfg.sh
+    fi
+    cp ${DEFCFG} $GRUBFILE
+    chmod 0666 $GRUBFILE
+}
+
+
+
+# if user have already connected. and the want to connect board at other place
+# so user need kill provious process
+function show_confirm()
+{
+    read -n1 -p "Do you want to kill it and try a new session [Y/N]?" answer
+    case $answer in
+    Y | y)
+        echo  -e "\n fine ,continue"
+	;;
+    N | n)
+        echo -e "\n ok,good bye"
+	exit 0
+	;;
+    *)
+        echo -e  "\n Sorry! Error choice"
+        exit 0
+    ;;
+    esac
+}
+
+ 
+
+# include d01 d02 1610 expander and others board without BMC
+# connect board
+connect_board_op_pdu()
+{
+    echo -e "\033[0m"
+    echo -e "\033[32mConnected to board: No=$BOARDIDX, type=$BOARDTYPE, port=$PORT, power=$POWER $OUTLET, grub=$GRUBFILE.\033[0m"
+    echo "exec telnet $MANAGER_SERVER_IP $PORT"
+    echo "$MANAGER_SERVER_IP:$PORT"
+    exec telnet $MANAGER_SERVER_IP $PORT
+    exit 0
+}
+
+
+
+# connect board with bmc ,such as d03 
+connect_board_op_bmc()
+{
+    ipmitool -H $BMCIP -I $IPMI_INTERFACE -U $ACCOUNT -P $PASSWORD $IPMI_SERIAL_CMD
+    exit 0 
+}
+
+
+connect_board_op_action()
+{
+    # connect boards
+    check_neccessary
+    if [ "$SERIALTYPE" = "BMC" ]; then
+        get_bmc_config "board_connet"
+	connect_board_op_bmc
+    elif [ "$SERIALTYPE" = "TELNET" ]; then
+        get_pdu_serial_config 
+        connect_board_op_pdu 
+    fi
+    exit
+}
+
+
+
+
+
