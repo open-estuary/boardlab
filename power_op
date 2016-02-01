@@ -1,0 +1,110 @@
+#!/bin/bash
+#author: Alan Huang, Justin Zhao
+#date 12/10/2015
+#Description: this is the pdu control script
+
+
+source public_op
+
+
+
+# Usage information 
+usage()
+{
+    echo "Usage: board_reboot [Num] [on|off|reboot]"
+    echo "To power on, off or reboot specify boards, default to reboot board num=1 without any parameters!"
+    echo "    Num:To operate the specified board assigned to user, Num is an interger board index which must be greater than 0, default to operate board num=1."
+    echo "    on|off|reboot:  To specify a power operation, default to reboot."
+    exit 0
+} 
+
+
+
+# take power action,
+# the parameter is pud_ip, pdu outlet and operation on:1,off=2,reboot=3
+# include d01 d02 1610 and othe other boards without BMC
+board_op_power_pdu()
+{
+    OPER=3
+    case $1 in 
+    "on")
+	OPER=1
+	;;
+    "off")
+	OPER=2
+	;;
+    "reboot")
+	OPER=3
+	;;
+    *)
+	usage
+    exit
+ 	;;
+    esac
+    # power on board
+    echo " $PDU_POWER_CMD $PDU_IP $OUTLET $OPER"
+    $PDU_POWER_CMD $PDU_IP $OUTLET $OPER
+    echo ""  
+}
+
+
+
+# power option:  boards wiht BMC,such as d03
+board_op_power_bmc()
+{
+    # action on power
+    case $1 in 
+    "on" | "off" )
+         ipmitool -H $BMCIP -I $IPMI_INTERFACE -U $ACCOUNT -P $PASSWORD $IPMI_POWER_CMD $1 
+         ;;
+    "reboot")
+         ipmitool -H $BMCIP -I $IPMI_INTERFACE -U $ACCOUNT -P $PASSWORD $IPMI_POWER_CMD off 
+         sleep 3
+         ipmitool -H $BMCIP -I $IPMI_INTERFACE -U $ACCOUNT -P $PASSWORD $IPMI_POWER_CMD on 
+         ;;
+    *)
+         usage
+         ;;
+    esac
+}
+
+
+
+# check and get pdu config parameter
+get_pdu_power_config()
+{
+    pdu_power=`grep -w "$POWERINFO:" $PDUCFG`
+    if [ $? -ne 0 ]; then
+	# Check whether the power controller is deployed
+	echo "$CONFIGINFO not config or configure is wrong, please touch lab Manager"
+	exit 1
+    fi
+    PDU_POWER_CMD=ap7921-control
+    PDU_IP=${pdu_power#*pdu_ip=}
+    PDU_IP=${PDU_IP%%,*}
+}
+
+
+
+
+
+# according to SERIALTYPE and POWERTYPE to take different function
+#
+board_op_power()
+{
+    if [ "$POWERTYPE" = "BMC" ]; then
+        get_bmc_config "board_reboot"
+        board_op_power_bmc $1
+
+    elif [ "$POWERTYPE" = "PDU" ]; then
+        get_pdu_power_config 
+	board_op_power_pdu $1
+    #elif ...
+    fi
+}
+
+
+
+
+
+

@@ -7,10 +7,13 @@ USERCFG=/etc/boardlab/users.cfg
 USERLOG=/var/log/login.log
 BOARDCFG=/etc/boardlab/boards.cfg
 LABCFG=/etc/boardlab/boardlab.cfg
+PDUCFG=/etc/boardlab/pdu.cfg
+BMCCFG=/etc/boardlab/bmc.cfg
+
 
 USERNAME=`whoami`
-#. $BOARDCFG
 . $LABCFG
+
 
 # Check whether user in permit list
 grep -w "$USERNAME:" $USERCFG >/dev/null 2>&1
@@ -56,10 +59,11 @@ if [ x"" = x"$BOARDIDX" ]; then
     exit 1
 fi
 
+BOARDNUM="BOARD$BOARDIDX"
 # Check whether the board is deployed
-grep -w "BOARD$BOARDIDX:" $BOARDCFG >/dev/null 2>&1
+grep -w "$BOARDNUM:" $BOARDCFG >/dev/null 2>&1
 if [ $? != 0 ];then
-    echo "Board$BOARDIDX is not deployed into Open Lab, please touch the Lab. manager."
+    echo "$BOARDNUM is not deployed into Open Lab, please touch the Lab. manager."
     exit 1
 fi
 
@@ -69,7 +73,7 @@ EMAIL=${userinfo#*email=}
 EMAIL=${EMAIL%%,*}
 
 # Get the board information
-boardinfo=`grep -w "BOARD$BOARDIDX:" $BOARDCFG`
+boardinfo=`grep -w "$BOARDNUM:" $BOARDCFG`
 PORT=${boardinfo#*ser2net=}
 PORT=${PORT%%,*}
 
@@ -80,15 +84,20 @@ GRUBFILE=${boardinfo#*mac=}
 GRUBFILE=${GRUBFILE%%,*}
 GRUBFILE=$ftp_dir/$grub_prefix"-"$GRUBFILE
 
-POWER=${boardinfo#*power=}
-POWER=${POWER%%,*}
+#power part
+POWERINFO=${boardinfo#*powerinfo=}
+POWERINFO=${POWERINFO%%,*}
+OUTLET=`echo "$POWERINFO" | cut -d " " -f2` 
+POWERINFO=`echo "$POWERINFO" | cut -d " " -f1`
+POWERTYPE=`echo $POWERINFO | sed 's/[0-9]*//g'`
 
-OUTLET=`echo $POWER | cut -d " " -f2`
-POWER=`echo $POWER | cut -d " " -f1`
 
-# Check whether the power controller is deployed
-grep -w "$POWER:" $BOARDCFG >/dev/null 2>&1
-if [ $? != 0 ];then
-    echo "Power$BOARDIDX is not deployed into Open Lab, please touch the Lab. manager."
-    exit 1
-fi
+
+
+
+
+
+
+
+
+
