@@ -1,0 +1,138 @@
+#!/bin/bash
+#author: Alan Huang, Justin Zhao
+#date 12/10/2015
+#Description: this is the pdu control script
+
+
+
+# check the board use status
+check_use_status()
+{
+    # Get the board information
+    boardinfo=`grep -w "$1:" $BOARDCFG`
+    PORT=${boardinfo#*ser2net=}
+    PORT=${PORT%%,*}
+    current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd|grep telnet |grep -w $1|cut -d " " -f1`
+}
+
+
+
+# take power action,
+# the parameter is pud_ip, pdu outlet and operation on:1,off=2,reboot=3
+# include d01 d02 1610 and othe other boards without BMC
+board_op_power_pdu()
+{
+    OPER=3
+    case $1 in 
+    "on")
+	OPER=1
+	;;
+    "off")
+	OPER=2
+	;;
+    "reboot")
+	OPER=3
+	;;
+    *)
+	usage
+    exit
+ 	;;
+    esac
+    # power on board
+    echo "$2 $3 $4 $OPER"
+    $2 $3 $4 $OPER
+    echo ""  
+}
+
+
+
+# power option:  boards wiht BMC,such as d03
+board_op_power_bmc()
+{
+    # action on power
+    case $1 in 
+    "on" | "off" )
+         ipmitool -H $2 -I $3 -U $4 -P $5 $6 $1 
+         ;;
+    "reboot")
+         ipmitool -H $2 -I $3 -U $4 -P $5 $6 off 
+         sleep 3
+         ipmitool -H $2 -I $3 -U $4 -P $5 $6 on 
+         ;;
+    *)
+         usage
+         ;;
+    esac
+}
+
+
+
+# check and get pdu config parameter
+get_pdu_power_config()
+{
+    pdu_power=`grep -w "$1:" $PDUCFG`
+    if [ $? -ne 0 ]; then
+	# Check whether the power controller is deployed
+	echo "$CONFIGINFO not config or configure is wrong, please touch lab Manager"
+	exit 1
+    fi
+    PDU_POWER_CMD=ap7921-control
+    PDU_IP=${pdu_power#*pdu_ip=}
+    PDU_IP=${PDU_IP%%,*}
+}
+
+
+# check and get bmc config parameter
+get_bmc_config()
+{
+   bmcinfo=`grep -w "$2:" $BMCCFG`
+   if [ $? -ne 0 ];then
+	# Check whether the power controller is deployed
+        echo "$CONFIGINFO is not config or config is wrong, please touch lab Manager."
+        exit 1
+    fi
+    BMCIP=${bmcinfo#*bmcip=}
+    BMCIP=${BMCIP%%,*}
+
+    IPMI_INTERFACE=${bmcinfo#*ipmi_interface=}
+    IPMI_INTERFACE=${IPMI_INTERFACE%%,*}
+ 
+    ACCOUNT=${bmcinfo#*account=}
+    ACCOUNT=${ACCOUNT%%,*}
+
+    PASSWORD=${bmcinfo#*password=}
+    PASSWORD=${PASSWORD%%,*}
+
+    if [ x"$1" = x"board_connet" ]; then
+        IPMI_SERIAL_CMD=${bmcinfo#*ipmi_serial_cmd=}
+        IPMI_SERIAL_CMD=${IPMI_SERIAL_CMD%%,*}
+    elif [ x"$1" = x"board_reboot" ]; then
+        IPMI_POWER_CMD=${bmcinfo#*ipmi_power_cmd=}
+        IPMI_POWER_CMD=${IPMI_POWER_CMD%%,*}
+    fi
+}
+
+
+
+
+# according to SERIALTYPE and POWERTYPE to take different function
+# the first parameter is reboot/on/off,the second is $POWERINFO
+# the third parameter is $OUTLET,
+board_op_power()
+{
+    if [ "$POWERTYPE" = "BMC" ]; then
+        get_bmc_config "board_reboot" $2
+        board_op_power_bmc $1 $BMCIP $IPMI_INTERFACE $ACCOUNT $PASSWORD $IPMI_POWER_CMD  
+
+    elif [ "$POWERTYPE" = "PDU" ]; then
+        get_pdu_power_config $2
+	board_op_power_pdu $1 $PDU_POWER_CMD $PDU_IP $3 
+    #elif ...
+    fi
+}
+
+
+
+
+
+
