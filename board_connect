@@ -1,12 +1,33 @@
 #!/bin/bash
-#author: Alan Huang, Justin Zhao
-#date 12/10/2015
-#description: connect the UART port of user's board by telnet
+TOP_DIR=$(cd "`dirname $0`" ; pwd)
+export PATH=$PATH:$TOP_DIR
 
-. check_board
+OPENLAB_TOPDIR=/usr/local/openlab
+OPENLAB_CONF_DIR=$OPENLAB_TOPDIR/openlab_conf
 
-# Usage information
-usage()
+USER="`whoami`"
+
+#############################################################################
+# Global Variable
+#############################################################################
+BOARD_NO=
+SERIAL=
+BOARD_INDEX=
+
+#############################################################################
+# Include
+#############################################################################
+. $OPENLAB_TOPDIR/Include/common.sh
+. $OPENLAB_TOPDIR/Include/userop.sh
+. $OPENLAB_TOPDIR/Include/boardop.sh
+. $OPENLAB_TOPDIR/Include/telnetop.sh
+. $OPENLAB_TOPDIR/Include/bmcop.sh
+. $OPENLAB_TOPDIR/Include/board_serial_op.sh
+
+#############################################################################
+# Usage
+#############################################################################
+Usage()
 {
     echo "Usage: board_connect [Num]"
     echo "    -h     : Display this information"
@@ -14,115 +35,85 @@ usage()
 	exit
 }
 
-declare board_using=0
-declare board_user="no user"
-using_check()
-{
- 	current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd|grep telnet |grep -w $1|cut -d " " -f1`
- 	psid=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd |grep -w $1|awk '{print $2}'`
-	current=`echo $current|cut -d "+" -f1`
-	echo "psid is $psid"
-	if [ "$current" = "" ];then
-        	board_using=0
-    	else
-       		board_using=1
-		board_user="$current"
-    	fi
-}
+#############################################################################
+# Check if user is in openlab user list
+#############################################################################
+if !(get_user_info $USER >/dev/null); then
+	echo "You are not permited to use the board in OpenLab."
+	exit 1
+fi
 
-check_neccessary()
-{
-    BAK_PATH=$ftp_dir/$ftp_bak
-
-    if [ x"$BOARDTYPE" = x"D01" ];then
-        IMG=$img_d01
-        DTB=$dtb_d01
-    else
-        IMG=$img_d02
-        DTB=$dtb_d02
-    fi
-
-    CPIO=$mini_rootfs
-
-	if [ ! -f ~/ftp/$IMG ] ;then
-		cp $BAK_PATH/$IMG ~/ftp/
-	fi 
-	if [ ! -f ~/ftp/$DTB ];then
-		cp $BAK_PATH/$DTB ~/ftp/
-	fi
-	if [ ! -f ~/ftp/$CPIO ];then
-		cp $BAK_PATH/$CPIO ~/ftp/	
-	fi
-	
-	if [ ! -f ${DEFCFG} ]; then
-		gencfg.sh
-	fi
-    cp ${DEFCFG} $GRUBFILE
-}
-
-function show_confirm()
-{
-	read -n1 -p "Do you want to kill it and try a new session [Y/N]?" answer
-	case $answer in
-	Y | y)
-     echo  -e "\n fine ,continue"
-	;;
-	N | n)
-    echo -e "\n ok,good bye"
-	exit 0
-	;;
+#############################################################################
+# Get BOARD_INDEX/BOARD_NO/SERIAL
+#############################################################################
+while test $# != 0
+do
+	case $1 in
+	--*=*)
+		ac_option=`expr "X$1" : 'X\([^=]*\)='`
+		ac_optarg=`expr "X$1" : 'X[^=]*=\(.*\)'`
+		ac_shift=:
+		;;
+	-*)
+		ac_option=$1
+		ac_optarg=$2
+		ac_shift=shift
+		;;
 	*)
- 	echo -e  "\n Sorry! Error choice"
-	exit 0
-	;;
+		ac_option=$1
+		ac_optarg=$1
+		ac_shift=:
+		;;
 	esac
-}
 
-connect()
-{
-     using_check $1
-     if [ $board_using = 1 ];then
-         usinginfo=`grep -w "$board_user:" $USERCFG`
-         mail_addr=${usinginfo#*email=}
-         mail_addr=${mail_addr%%,*}
-         mail_user=${usinginfo%%:*}
-     	if [ "$USERNAME" = "$mail_user" ];then
-     		echo "You are using another session connected to the board"
-     		show_confirm
-     		echo "kill the ps $psid"
-     		kill $psid
-     	else
-         	echo "$mail_addr is using the board on $2"
-         	echo "if you really want to use it, please contact with him"
-        		exit 1
-     	fi
-    fi
+	case $ac_option in
+	"-h" | "--help")
+		Usage ; exit 0 ;;
+	[0-9]*)
+		BOARD_INDEX=$[$ac_optarg - 1] ;;
+	*)
+		echo -e "\033[31mUnknown option $ac_option!\033[0m" >&2
+		Usage ; exit 1 ;;
+	esac
+	
+	shift
+done
 
-    check_neccessary
-	echo -e "\033[0m"
-	echo -e "\033[32mConnected to board: No=$BOARDIDX, type=$BOARDTYPE, port=$PORT, power=$POWER $OUTLET, grub=$GRUBFILE.\033[0m"
-    telnet localhost $1
-    
-    exit 0
-}
-
-if [ x"$#" = x"1" -a x"$1" = x"-h" ]; then
-    usage
-    exit
+#############################################################################
+# Get BOARD_NO
+#############################################################################
+if [ x"$BOARD_NO" = x"" ]; then
+	if [ x"$BOARD_INDEX" != x"" ]; then
+		user_boards=($(get_user_boards $USER))
+		BOARD_NO=${user_boards[$BOARD_INDEX]}
+	else
+		user_boards=($(get_user_boards $USER))
+		BOARD_NO=${user_boards[0]}
+	fi
 fi
 
-if [ $# -gt 0 ]; then
-    showhelp=1
-    if [ $# = 1 ]; then
-        if [ "$1" -gt 0 ] 2>/dev/null ; then 
-            showhelp=0 
-        fi
-    fi
-
-    if [ $showhelp = 1 ];then
-        usage
-        exit
-    fi
+#############################################################################
+# Check if board is deployed or being used 
+#############################################################################
+if !(get_board_info $BOARD_NO >/dev/null); then
+	echo -e "\033[31mCan't find board info ......\033[0m" ; exit 0
 fi
 
-connect $PORT
+if !(board_deploy_chk $BOARD_NO); then
+	exit 1
+fi
+
+if !(board_using_chk $BOARD_NO connect); then
+	exit 1
+fi
+
+#############################################################################
+# Connect to Target Board
+#############################################################################
+board_file_copy $BOARD_NO
+
+board_connect_cmd=$(get_board_connect_cmd $BOARD_NO)
+board_type=$(get_board_type $BOARD_NO)
+echo -e "\033[32mConnected to board: No=$BOARD_NO, type=$board_type.\033[0m"
+exec $board_connect_cmd
+

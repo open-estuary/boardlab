@@ -3,61 +3,72 @@
 #date: 12/10/2015
 #description: to install board management system.
 
-CFGPATH="/etc/boardlab"
 BINPATH="/usr/bin"
 
 apt-get install ser2net -y
 apt-get install expect-lite -y
+apt-get install ipmitool -y
+apt-get install telnet -y
 
 PRJDIR="`dirname $0`"
 cd $PRJDIR
 
+#############################################################################
+# Include
+#############################################################################
+. ./Include/common.sh
+
+#############################################################################
 # Install config files
-mkdir -p $CFGPATH 2>/dev/null
+#############################################################################
+mkdir -p $OPENLAB_TOPDIR 2>/dev/null
 
-if [ ! -f "$CFGPATH/boards.cfg" ]; then
-    cp boards.cfg $CFGPATH/
+if [ ! -d "$OPENLAB_CONF_DIR" ]; then
+    cp -r openlab_conf $OPENLAB_TOPDIR/
 fi
 
-if [ ! -f "$CFGPATH/users.cfg" ]; then
-    cp users.cfg $CFGPATH/
-fi
-
-if [ ! -f "$CFGPATH/boardlab.cfg" ]; then
-    cp boardlab.cfg $CFGPATH/
+if [ ! -d "$OPENLAB_TOPDIR/Include" ]; then
+    cp -r Include $OPENLAB_TOPDIR/
 fi
 
 # Install binaries
 cp ap7921-control $BINPATH
 if [ $? != 0 ]; then
     echo "You should do this command with \"sudo\" before it"
-    exit
+    exit 1
 fi
-cp check_board $BINPATH
+
+#############################################################################
+# Copy board binaries to /usr/bin.
+#############################################################################
 cp board_connect $BINPATH
 cp board_list $BINPATH
 cp board_reboot $BINPATH
-cp cp_rootfs.sh $BINPATH
+cp newuser $BINPATH
 cp gencfg.sh $BINPATH
 cp inituser $BINPATH
 cp newuser $BINPATH
 
-. $CFGPATH/boardlab.cfg
+#############################################################################
+# Create ftp directory and copy base file system
+#############################################################################
+mkdir -p $FTP_DIR 2>/dev/null
+chmod 777 $FTP_DIR
+mkdir -p $FTP_DIR/$FTP_BAK 2>/dev/null
+cp *Image_D* $FTP_DIR/$FTP_BAK/
+cp hip*.dtb $FTP_DIR/$FTP_BAK/
+cp mini-rootfs*.cpio.gz $FTP_DIR/$FTP_BAK/
 
-mkdir -p $ftp_dir 2>/dev/null
-chmod 777 $ftp_dir
-mkdir -p $ftp_dir/$ftp_bak 2>/dev/null
-cp $img_d01 $ftp_dir/$ftp_bak/
-cp $dtb_d01 $ftp_dir/$ftp_bak/
-cp $img_d02 $ftp_dir/$ftp_bak/
-cp $dtb_d02 $ftp_dir/$ftp_bak/
-cp $mini_rootfs $ftp_dir/$ftp_bak/
-
+#############################################################################
+# Comm user profile
+#############################################################################
 grep "inituser" /etc/skel/.bashrc >/dev/null
 if [ $? = 1 ]; then
-    echo "if [ -f /usr/bin/inituser ]; then
+    echo "export PATH=\$PATH:/sbin
+if [ -f /usr/bin/inituser ]; then
     $BINPATH/inituser    
 fi" >> /etc/skel/.bashrc
 fi
 
 echo "Boardlab installed successfully!"
+
