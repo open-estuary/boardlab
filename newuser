@@ -1,32 +1,43 @@
-#!/bin/sh
+#!/bin/bash
 #author: Alan Huang, Justin Zhao
 #date: 13/10/2015
 #description: this is the script to create multi user
 
-USERCFG=/etc/boardlab/users.cfg
+#############################################################################
+#
+#############################################################################
+OPENLAB_TOPDIR=/usr/local/openlab
+OPENLAB_CONF_DIR=$OPENLAB_TOPDIR/openlab_conf
+USERCFG=$OPENLAB_CONF_DIR/userinfo.cfg
+
+#############################################################################
+#
+#############################################################################
 while read LINE
 do
-    username=${LINE%%:*}
-
-    id $username >/dev/null 2>&1
+    echo "#########################################"
+    user_name=${LINE%%:*}
+    
+    id $user_name >/dev/null 2>&1
     if [ $? = 0 ];then
-        echo "$username existed!"
+	echo "Warning! User $user_name existed!"
+	echo ""
     else
-        echo "Create user $username ...."
+        echo "Create user $user_name ...."
 
-        boards=${LINE#*boards=}
-        boards=${boards%%,*}
-        num=${boards%% *}
-        boards=${boards#* }
-        cmd="useradd $username -s /bin/bash -m -G board$num"
-        while [ ${#num} != ${#boards} ]
-        do
-            num=${boards%% *}
-            boards=${boards#* }
+	user_boards=($(echo $LINE | grep -Po "(?<=boards=)([^,]*)"))
+	board_num=${#user_boards[@]}
 
-            cmd=$cmd",board$num"
-        done
-        $cmd
-        echo $username:123456|chpasswd
+        user_add_cmd="useradd $user_name -s /bin/bash -m -G board${user_boards[0]}"
+	for ((index=1; index<board_num; index++))
+	do
+		user_add_cmd=$user_add_cmd",${user_boards[index]}"
+	done
+
+        $user_add_cmd
+        echo $user_name:123456 | chpasswd
+	echo ""
     fi
 done  <$USERCFG
+
+

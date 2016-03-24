@@ -1,6 +1,47 @@
 #!/bin/bash
-#author: Justin Zhao
-#date 23/11/2015
-#description: list all boards possessed by user
+TOP_DIR=$(cd "`dirname $0`" ; pwd)
+export PATH=$TOP_DIR/bin:$PATH
 
-check_board boardslist
+OPENLAB_TOPDIR=/usr/local/openlab
+OPENLAB_CONF_DIR=$OPENLAB_TOPDIR/openlab_conf
+
+USER="`whoami`"
+#############################################################################
+#
+#############################################################################
+. $OPENLAB_TOPDIR/Include/common.sh
+. $OPENLAB_TOPDIR/Include/userop.sh
+
+#############################################################################
+# Check if user is in userinfo.cfg
+#############################################################################
+if !(get_user_info $USER >/dev/null); then
+	echo "You are not permited to use the board in OpenLab."
+	exit 1
+fi
+
+#############################################################################
+# List all shared board info
+#############################################################################
+echo "${USER} possessed boards list:"
+echo "Idx: Board No -> Shared Users"
+
+user_boards=($(get_user_boards $USER))
+board_num=${#user_boards[@]}
+
+idx=1
+for (( idx=0; idx<board_num; idx++))
+do
+	
+	board_no=${user_boards[$idx]}
+	shared_info=`grep -E "boards=.*\b${board_no}\b" $OPENLAB_CONF_DIR/$USER_INFO_FILE | grep -v "${USER}:" | cut -d "," -f1 | sed "s/email=//g" | tr '\n' ";"|sed "s/;/; /g"`
+	if [ x"" = x"$shared_info" ]; then
+		echo "${idx}  : ${board_no}"
+	else
+		echo "${idx}  : ${board_no} -> ${shared_info}"
+	fi
+
+	let idx=$idx+1
+done
+
+

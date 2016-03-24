@@ -1,100 +1,120 @@
 #!/bin/bash
-#author: Alan Huang, Justin Zhao
-#date 12/10/2015
-#Description: this is the pdu control script
-#
+TOP_DIR=$(cd "`dirname $0`" ; pwd)
+OPENLAB_TOPDIR=/usr/local/openlab
+OPENLAB_CONF_DIR=$OPENLAB_TOPDIR/openlab_conf
 
-. check_board
-POWER_CMD=ap7921-control
+USER="`whoami`"
 
-# Get the power controller information
-powerinfo=`grep -w "$POWER:" $BOARDCFG`
-PDU_HOST=${powerinfo#*ip=}
-PDU_HOST=${PDU_HOST%%,*}
+#############################################################################
+# Global Variable
+#############################################################################
+BOARD_OP="reset"
 
-usage()
+BOARD_NO=
+BOARD_INDEX=
+SERIAL=
+
+#############################################################################
+# Include
+#############################################################################
+. $OPENLAB_TOPDIR/Include/common.sh
+. $OPENLAB_TOPDIR/Include/telnetop.sh
+. $OPENLAB_TOPDIR/Include/userop.sh
+. $OPENLAB_TOPDIR/Include/boardop.sh
+. $OPENLAB_TOPDIR/Include/pduop.sh
+. $OPENLAB_TOPDIR/Include/bmcop.sh
+. $OPENLAB_TOPDIR/Include/board_power_op.sh
+
+#############################################################################
+# Usage
+#############################################################################
+Usage()
 {
     echo "Usage: board_reboot [Num] [on|off|reboot]"
     echo "To power on, off or reboot specify boards, default to reboot board1 without any parameters!"
     echo "    Num:            To operate the specified board assigned to user, Num is an interger board index which must be greater than 0, default to operate board1."
     echo "    on|off|reboot:  To specify a power operation, default to reboot."
     exit 0
-} 
+}
 
-board_op()
-{
-	OPER=3
+#############################################################################
+# Check if user is in openlab user list
+#############################################################################
+if !(get_user_info $USER >/dev/null); then
+	echo "You are not permited to use the board in OpenLab."
+	exit 1
+fi
 
-	case $1 in 
-	"on")
-		OPER=1
+#############################################################################
+# Get BOARD_INDEX/BOARD_NO/SERIAL
+#############################################################################
+while test $# != 0
+do
+	case $1 in
+	--*=*)
+		ac_option=`expr "X$1" : 'X\([^=]*\)='`
+		ac_optarg=`expr "X$1" : 'X[^=]*=\(.*\)'`
+		ac_shift=:
 		;;
-	"off")
-		OPER=2
-		;;
-	"reboot")
-		OPER=3
+	-*)
+		ac_option=$1
+		ac_optarg=$2
+		ac_shift=shift
 		;;
 	*)
-		usage
-        exit
+		ac_option=$1
+		ac_optarg=$1
+		ac_shift=:
 		;;
 	esac
 
-# Check the whether the board is being used, and send the operation command
-    current=`ps -o ruser=userForLongName -e -o pid,ppid,c,stime,tty,time,cmd | grep telnet | grep $PORT | cut -d " " -f1`
-    current=`echo $current|cut -d "+" -f1`
-    if [ "$current" = "" ];then
-	    $POWER_CMD $PDU_HOST $OUTLET $OPER
-		echo ""
-    else
-        current_user=`grep -w $current $USERCFG|cut -d ":" -f1`
-        if [ "$current_user" = "$USERNAME" ];then
-	        $POWER_CMD $PDU_HOST $OUTLET $OPER
-			echo ""
-        else
-            email=`grep -w $current $USERCFG`
-            email=${email#*email=}
-            email=${email%%,*}
-            echo "              ********WARNING********"
-            echo "  $email is using the board on $PORT"
-            echo "  Please wait until he/she  finishes the work"
-            echo "  Or you can contact with him by email."
-        fi
-    fi
-	exit 0
-}
+	case $ac_option in
+	"-h" | "--help")
+		Usage ; exit 0 ;;
+	[0-9]*)
+		BOARD_INDEX=$[$ac_optarg - 1] ;;
+	"on" | "off")
+		BOARD_OP=$ac_optarg ;;
+	"reboot")
+		BOARD_OP="reset" ;;
+	*)
+		echo -e "\033[31mUnknown option $ac_option!\033[0m" >&2
+		Usage ; exit 1 ;;
+	esac
+	
+	shift
+done
 
-if [ $# = 2 ]; then
-    if [ "$1" -gt 0 ] 2>/dev/null ; then
-        board_op $2
-    else
-        usage
-    fi
-    exit
-else 
-    if [ $# -gt 1 ]; then
-    	usage
-        exit
-    fi
-
-    
-    if [ $# = 1 ]; then
-        if [ "$1" -gt 0 ] 2>/dev/null ; then
-            board_op reboot
-        else
-            case $1 in
-            "on"|"off"|"reboot")
-                board_op $1
-                ;;
-            *)
-                usage
-                ;;
-            esac
-        fi
-        exit
-    fi
+#############################################################################
+# Get BOARD_NO
+#############################################################################
+if [ x"$BOARD_NO" = x"" ]; then
+	if [ x"$BOARD_INDEX" != x"" ]; then
+		user_boards=($(get_user_boards $USER))
+		BOARD_NO=${user_boards[$BOARD_INDEX]}
+	else
+		user_boards=($(get_user_boards $USER))
+		BOARD_NO=${user_boards[0]}
+	fi
 fi
 
-#default to reboot board1
-board_op reboot
+#############################################################################
+# Check board and operate the power
+#############################################################################
+if !(get_board_info $BOARD_NO >/dev/null); then
+	echo -e "\033[31mCan't find board info ......\033[0m" ; exit 0
+fi
+
+if !(board_deploy_chk $BOARD_NO); then
+	exit 1
+fi
+
+if !(board_using_chk $BOARD_NO $BOARD_OP); then
+	exit 1
+fi
+
+board_power $BOARD_NO $BOARD_OP
+echo ""
+
+
+

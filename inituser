@@ -3,12 +3,51 @@
 #date: 13/10/2015
 #description: Intialize user
 
-CHKBOARD=/usr/bin/check_board
-. $CHKBOARD
+#############################################################################
+#
+#############################################################################
+USERNAME="`whoami`"
+OPENLAB_TOPDIR=/usr/local/openlab
+OPENLAB_CONF_DIR=$OPENLAB_TOPDIR/openlab_conf
+export PATH=$PATH:$OPENLAB_TOPDIR
 
-BACK_UP=$ftp_dir/$ftp_bak
-FTP_DIR=$ftp_dir/$USERNAME
+USER_BOARDS=()
+BOARD_NO=
 
+#############################################################################
+#
+#############################################################################
+. $OPENLAB_TOPDIR/Include/common.sh
+. $OPENLAB_TOPDIR/Include/userop.sh
+. $OPENLAB_TOPDIR/Include/boardop.sh
+. $OPENLAB_TOPDIR/Include/telnetop.sh
+. $OPENLAB_TOPDIR/Include/board_serial_op.sh
+
+BACK_UP=$FTP_DIR/$FTP_BAK
+USER_FTPDIR=$FTP_DIR/$USERNAME
+
+#############################################################################
+# User info and board check.
+#############################################################################
+if !(get_user_info $USER >/dev/null); then
+	echo "You are not permited to use the board in OpenLab."
+	exit 1
+fi
+
+USER_BOARDS=($(get_user_boards $USER))
+BOARD_NO=${USER_BOARDS[0]}
+
+if !(get_board_info $BOARD_NO >/dev/null); then
+	echo -e "\033[31mCan't find board info ......\033[0m" ; exit 0
+fi
+
+if !(board_deploy_chk $BOARD_NO); then
+	exit 1
+fi
+
+#############################################################################
+# Create soft link and files.
+#############################################################################
 if [ -L ~/ftp ];then
     rm ~/ftp
 fi
@@ -21,36 +60,47 @@ if [ ! -f "${DEFCFG}" ];then
     gencfg.sh
 fi
 
-if [ ! -d $FTP_DIR ];then
-    mkdir -p $FTP_DIR
+if [ ! -d $USER_FTPDIR ];then
+    mkdir -p $USER_FTPDIR
 fi
 
+baord_mac=$(get_board_mac $BOARD_NO)
+GRUBFILE=$FTP_DIR/$GRUB_PREFIX"-"$baord_mac
 ln -s $GRUBFILE ~/config
-ln -s $FTP_DIR ~/ftp
+ln -s $USER_FTPDIR ~/ftp
 
 #init the ftp directory
 if [ $? = 0 ];then
-    if [ ! -e $FTP_DIR/$img_d01 ];then
-        cp $BACK_UP/$img_d01 ~/ftp
+    if [ ! -e $USER_FTPDIR/$IMG_D01 ];then
+        cp $BACK_UP/$IMG_D01 ~/ftp
     fi
 
-    if [ ! -e $FTP_DIR/$img_d02 ];then
-        cp $BACK_UP/$img_d02 ~/ftp
+    if [ ! -e $USER_FTPDIR/$IMG_D02 ];then
+        cp $BACK_UP/$IMG_D02 ~/ftp
     fi
 
-    if [ ! -e $FTP_DIR/$dtb_d01 ];then
-        cp $BACK_UP/$dtb_d01 ~/ftp
+    if [ ! -e $FTP_DIR/$IMG_D03 ];then
+        cp $BACK_UP/$IMG_D03 ~/ftp
     fi
 
-    if [ ! -e $FTP_DIR/$dtb_d01 ];then
-        cp $BACK_UP/$dtb_d01 ~/ftp
+    if [ ! -e $USER_FTPDIR/$DTB_D01 ];then
+        cp $BACK_UP/$DTB_D01 ~/ftp
     fi
 
-    if [ ! -e $FTP_DIR/$mini_rootfs ];then
-        cp $BACK_UP/$mini_rootfs ~/ftp
+    if [ ! -e $USER_FTPDIR/$DTB_D02 ];then
+        cp $BACK_UP/$DTB_D02 ~/ftp
     fi
 
-    if [ ! -d $FTP_DIR/ubuntu ];then
-        mkdir $FTP_DIR/ubuntu
+    if [ ! -e $USER_FTPDIR/$DTB_D03 ];then
+        cp $BACK_UP/$DTB_D03 ~/ftp
+    fi
+
+    if [ ! -e $USER_FTPDIR/$MINI_ROOTFS ];then
+        cp $BACK_UP/$MINI_ROOTFS ~/ftp
+    fi
+
+    if [ ! -d $USER_FTPDIR/ubuntu ];then
+        mkdir $USER_FTPDIR/ubuntu
     fi
 fi
+
