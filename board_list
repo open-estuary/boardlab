@@ -29,19 +29,13 @@ echo "Idx: Board No -> Shared Users"
 user_boards=($(get_user_boards $USER))
 board_num=${#user_boards[@]}
 
-idx=1
 for (( idx=0; idx<board_num; idx++))
 do
-	
 	board_no=${user_boards[$idx]}
 	shared_info=`grep -E "boards=.*\b${board_no}\b" $OPENLAB_CONF_DIR/$USER_INFO_FILE | grep -v "${USER}:" | cut -d "," -f1 | sed "s/email=//g" | tr '\n' ";"|sed "s/;/; /g"`
 	if [ x"" = x"$shared_info" ]; then
-		echo "${idx}  : ${board_no}"
+		echo "$[${idx}+1]  : ${board_no}"
 	else
-		echo "${idx}  : ${board_no} -> ${shared_info}"
+		echo "$[${idx}+1]  : ${board_no} -> ${shared_info}"
 	fi
-
-	let idx=$idx+1
 done
-
-
