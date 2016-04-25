@@ -79,7 +79,7 @@ if [ $? = 0 ];then
         cp $BACK_UP/$IMG_D02 ~/ftp
     fi
 
-    if [ ! -e $FTP_DIR/$IMG_D03 ];then
+    if [ ! -e $USER_FTPDIR/$IMG_D03 ];then
         cp $BACK_UP/$IMG_D03 ~/ftp
     fi
 

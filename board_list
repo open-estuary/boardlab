@@ -24,7 +24,7 @@ fi
 # List all shared board info
 #############################################################################
 echo "${USER} possessed boards list:"
-echo "Idx: Board No -> Shared Users"
+printf "%3s: %8s %10s -> Shared Users\n" "Idx" "Board No" "Board Type"
 
 user_boards=($(get_user_boards $USER))
 board_num=${#user_boards[@]}
@@ -32,10 +32,11 @@ board_num=${#user_boards[@]}
 for (( idx=0; idx<board_num; idx++))
 do
 	board_no=${user_boards[$idx]}
+	board_type=$(grep -E "^(BOARD$board_no:).*" $OPENLAB_CONF_DIR/$BOARD_INFO_FILE | grep -Po "(?<=type=)([^ ,]*)")
 	shared_info=`grep -E "boards=.*\b${board_no}\b" $OPENLAB_CONF_DIR/$USER_INFO_FILE | grep -v "${USER}:" | cut -d "," -f1 | sed "s/email=//g" | tr '\n' ";"|sed "s/;/; /g"`
 	if [ x"" = x"$shared_info" ]; then
-		echo "$[${idx}+1]  : ${board_no}"
+		printf "%3s: %8s %10s\n" "$[${idx}+1]" "${board_no}" "${board_type}"
 	else
-		echo "$[${idx}+1]  : ${board_no} -> ${shared_info}"
+		printf "%3s: %8s %10s -> %s\n" "$[${idx}+1]" "${board_no}" "${board_type}" "${shared_info}"
 	fi
 done

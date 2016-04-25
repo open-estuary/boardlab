@@ -1,0 +1,2 @@
+KERNEL=="ttyUSB*", ACTION=="add", RUN+="/usr/local/openlab/openlab_conf/add_ttyUSB.sh %k %p"
+KERNEL=="ttyUSB*", ACTION=="remove", RUN+="/usr/local/openlab/openlab_conf/remove_ttyUSB.sh %k %p"

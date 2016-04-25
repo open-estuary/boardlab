@@ -48,6 +48,7 @@ cp newuser $BINPATH
 cp gencfg.sh $BINPATH
 cp inituser $BINPATH
 cp newuser $BINPATH
+sudo cp 50-usb-serial.rules /etc/udev/rules.d/
 
 #############################################################################
 # Create ftp directory and copy base file system
