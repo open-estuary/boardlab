@@ -85,6 +85,9 @@ done
 if [ x"$BOARD_NO" = x"" ]; then
 	if [ x"$BOARD_INDEX" != x"" ]; then
 		user_boards=($(get_user_boards $USER))
+		if [ $BOARD_INDEX -lt 0 ] || [ $BOARD_INDEX -ge ${#user_boards[@]} ]; then
+			echo -e "\033[31mInvalid board index! Please use board_list to get your board info!\033[0m" >&2 ; exit 1
+		fi
 		BOARD_NO=${user_boards[$BOARD_INDEX]}
 	else
 		user_boards=($(get_user_boards $USER))
@@ -96,7 +99,7 @@ fi
 # Check if board is deployed or being used 
 #############################################################################
 if !(get_board_info $BOARD_NO >/dev/null); then
-	echo -e "\033[31mCan't find board info ......\033[0m" ; exit 0
+	echo -e "\033[31mCan't find board info! Please touch Lab admin to get more help!\033[0m" ; exit 0
 fi
 
 if !(board_deploy_chk $BOARD_NO); then

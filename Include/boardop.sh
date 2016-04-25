@@ -75,6 +75,10 @@ board_using_chk_ex()
 			Y | y)
 				echo  -e "\n fine ,continue"
 				close_board_connect $brdNo
+				local pid=`get_board_connect_pid $brdNo`
+				if [ x"$pid" != x"" ]; then
+					kill -s 9 $pid
+				fi
 				return 0
 				;;
 			N | n)
@@ -237,7 +241,11 @@ board_file_copy_ex()
 		gencfg.sh
 	fi
 
+	rm -f $FTP_DIR/${grubfile}
 	cp ${DEFCFG} $FTP_DIR/${grubfile}
+	chmod a+rw $FTP_DIR/${grubfile}
+	rm -f ~/config
+	ln -s $FTP_DIR/${grubfile} ~/config
 }
 
 #############################################################################
