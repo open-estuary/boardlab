@@ -48,6 +48,7 @@ get_user_info()
 	local usr=$1
 	local usr_info=$(grep -P "^($usr:).*" $OPENLAB_CONF_DIR/$USER_INFO_FILE)
 	echo $usr_info
+
 	if [ x"$usr_info" != x"" ]; then
 		return 0
 	else

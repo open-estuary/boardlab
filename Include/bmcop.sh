@@ -5,17 +5,17 @@
 #############################################################################
 get_bmc_op_cmd()
 {
-	(
-	bmc="BMC$1"
+	local bmc="BMC$1"
 	shift
-	bmc_op=$@
-	bmc_info=$(grep -P "^($bmc:).*" $OPENLAB_CONF_DIR/$BMC_INFO_FILE)
-	bmc_ip=$(echo "$bmc_info" | grep -Po "(?<=ip=)([^,]*)")
-	bmc_account=$(echo "$bmc_info" | grep -Po "(?<=account=)([^,]*)")
-	bmc_pass=$(echo "$bmc_info" | grep -Po "(?<=pass=)([^,]*)")
-	bmc_op_cmd="ipmitool -H $bmc_ip -I lanplus -U $bmc_account -P $bmc_pass $bmc_op"
+
+	local bmc_op=$@
+	local bmc_info=$(grep -P "^($bmc:).*" $OPENLAB_CONF_DIR/$BMC_INFO_FILE)
+	local bmc_ip=$(echo "$bmc_info" | grep -Po "(?<=ip=)([^,]*)")
+	local bmc_if=$(echo "$bmc_info" | grep -Po "(?<=interface=)([^,]*)")
+	local bmc_account=$(echo "$bmc_info" | grep -Po "(?<=account=)([^,]*)")
+	local bmc_pass=$(echo "$bmc_info" | grep -Po "(?<=pass=)([^,]*)")
+	local bmc_op_cmd="ipmitool -H $bmc_ip -I $bmc_if -U $bmc_account -P $bmc_pass $bmc_op"
 	echo $bmc_op_cmd
-	)
 }
 
 #############################################################################
@@ -99,8 +99,8 @@ bmc_power()
 #############################################################################
 bmc_serial_ex()
 {
-	bmc_no=$1
-	sol_op=$2
+	local bmc_no=$1
+	local sol_op=$2
 
 	case $sol_op in
 	"connect")

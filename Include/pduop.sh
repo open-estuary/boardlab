@@ -5,15 +5,16 @@
 #############################################################################
 send_cmd_to_pdu_ex()
 {
-	pdu_on=1
-	pdu_off=2
-	pdu_reset=3
+	local pdu_on=1
+	local pdu_off=2
+	local pdu_reset=3
 	
-	pdu_no=$1
-	outlet=$2
-	pdu_op=$3
-	pdu_ip=$(grep -P "^(PDU$pdu_no).*" $OPENLAB_CONF_DIR/$PDU_INFO_FILE | grep -Po "(?<=ip=)([^,]*)")
+	local pdu_no=$1
+	local outlet=$2
+	local pdu_op=$3
+	local pdu_ip=$(grep -P "^(PDU$pdu_no).*" $OPENLAB_CONF_DIR/$PDU_INFO_FILE | grep -Po "(?<=ip=)([^,]*)")
 	eval op=\$pdu_$pdu_op
+
 	exec ap7921-control $pdu_ip $outlet $op
 }
 

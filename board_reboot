@@ -89,14 +89,13 @@ done
 # Get BOARD_NO
 #############################################################################
 if [ x"$BOARD_NO" = x"" ]; then
+	user_boards=($(get_user_boards $USER))
 	if [ x"$BOARD_INDEX" != x"" ]; then
-		user_boards=($(get_user_boards $USER))
 		if [ $BOARD_INDEX -lt 0 ] || [ $BOARD_INDEX -ge ${#user_boards[@]} ]; then
 			echo -e "\033[31mInvalid board index! Please use board_list to get your board info!\033[0m" >&2 ; exit 1
 		fi
 		BOARD_NO=${user_boards[$BOARD_INDEX]}
 	else
-		user_boards=($(get_user_boards $USER))
 		BOARD_NO=${user_boards[0]}
 	fi
 fi

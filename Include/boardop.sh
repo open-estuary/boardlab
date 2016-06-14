@@ -1,12 +1,19 @@
 #!/bin/bash
 
 #############################################################################
+# get_board_info brdNo
+#############################################################################
+get_board_info()
+{
+	grep -P "^(BOARD$1:).*" $OPENLAB_CONF_DIR/$BOARD_INFO_FILE
+}
+
+#############################################################################
 # get_board_type brdNo
 #############################################################################
 get_board_type()
 {
-	local board_no=$1
-	local board_info=$(grep -P "^(BOARD$board_no:).*" $OPENLAB_CONF_DIR/$BOARD_INFO_FILE)
+	local board_info=$(get_board_info $1)
 	local board_type=$(echo $board_info | grep -Po "(?<=type=)([^ ,]*)")
 	echo $board_type
 }
@@ -16,18 +23,9 @@ get_board_type()
 #############################################################################
 get_board_mac()
 {
-	local board_no=$1
-	local board_info=$(grep -P "^(BOARD$board_no:).*" $OPENLAB_CONF_DIR/$BOARD_INFO_FILE)
+	local board_info=$(get_board_info $1)
 	local board_mac=$(echo $board_info | grep -Po "(?<=mac=)([^ ,]*)")
 	echo $board_mac
-}
-
-#############################################################################
-# get_board_info brdNo
-#############################################################################
-get_board_info()
-{
-	grep -P "^(BOARD$1:).*" $OPENLAB_CONF_DIR/$BOARD_INFO_FILE
 }
 
 #############################################################################
@@ -35,8 +33,8 @@ get_board_info()
 #############################################################################
 board_deploy_chk()
 {
-	local board_no=$1
-	local board_info=$(grep -P "^(BOARD$board_no:).*" $OPENLAB_CONF_DIR/$BOARD_INFO_FILE)
+	local brdNo=$1
+	local board_info=$(get_board_info $brdNo)
 	local power_info=$(echo $board_info | grep -Po "(?<=power=)([^,]*)")
 	local power_type=$(echo "$power_info" | grep -Po "(PDU|BMC)")
 	local power_args=($(echo ${power_info#$power_type}))
@@ -62,11 +60,11 @@ board_deploy_chk()
 #############################################################################
 board_using_chk_ex()
 {
-	brdNo=$1
-	op=$2
+	local brdNo=$1
+	local op=$2
 
-	user=`whoami`
-	usr=$(get_board_current_user $brdNo)
+	local user=`whoami`
+	local usr=$(get_board_current_user $brdNo)
 	if [ x"$usr" = x"$user" ]; then
 		if [ x"$op" = x"connect" ]; then
 			echo "You are using another session connected to the board."
@@ -90,7 +88,7 @@ board_using_chk_ex()
 			esac
 		fi
 	elif [ x"$usr" != x"" ]; then
-		email=$(get_user_mail $usr)
+		local email=$(get_user_mail $usr)
 		echo "$email is using the board on $brdNo"
 		echo "if you really want to use it, please contact with him" ; return 1
 	fi
@@ -115,10 +113,8 @@ board_using_chk()
 #############################################################################
 get_board_connect_cmd()
 {
-	local board_no=$1
 	local board_connect_cmd=
-	local board_info=$(grep -P "^(BOARD$board_no:).*" $OPENLAB_CONF_DIR/$BOARD_INFO_FILE)
-
+	local board_info=$(get_board_info $1)
 	local serial=$(echo "$board_info" | grep -Po "(?<=serno=)([^ ,]*)")
 	local serial_type=$(echo "$serial" | grep -Po "(TELNET|BMC)")
 	local serial_no=${serial#$serial_type}
@@ -186,26 +182,8 @@ board_deploy_check()
 		echo "Board$brdNo is not deployed into Open Lab, please touch the Lab. manager."
 		return 1
 	fi
-	local power=$(echo "$board_info" | grep -Po "(?<=power=)([^,]*)")
-}
 
-#############################################################################
-# board_check brdNo
-#############################################################################
-board_using_check()
-{
-	local board_no=$1
-	local user="`whoami`"
-	if [ x"$usr" = x"" ]; then
-		return 0
-	elif [ x"$usr" = x"$usr" ]; then
-		echo "You are using another session connected to the board" >&2
-		return 1
-	else
-		local mail=$(get_user_mail $usr)
-		echo "$mail is using the board on $2" >&2
-		return 2
-	fi
+	local power=$(echo "$board_info" | grep -Po "(?<=power=)([^,]*)")
 }
 
 #############################################################################
@@ -213,27 +191,25 @@ board_using_check()
 #############################################################################
 board_file_copy_ex()
 {
-	board_no=$1
-	board_type=$(get_board_type $board_no)
-	baord_mac=$(get_board_mac $board_no)
+	local board_no=$1
+	local board_type=$(get_board_type $board_no)
+	local baord_mac=$(get_board_mac $board_no)
 
-	platform=$(echo $board_type | tr "[:upper:]" "[:lower:]")
-	grubfile=${GRUB_PREFIX}-${baord_mac}
-
-	bak_path=$FTP_DIR/$FTP_BAK
+	local bak_path=$FTP_DIR/$FTP_BAK
+	local grubfile=${GRUB_PREFIX}-${baord_mac}
 
 	eval IMG=\$IMG_$board_type
 	eval DTB=\$DTB_$board_type
 
-	CPIO=$mini_rootfs
-
-	if [ ! -f ~/ftp/$IMG ] ;then
+	if [ ! -f ~/ftp/$IMG ]; then
 		cp $bak_path/$IMG ~/ftp/
-	fi 
-	if [ ! -f ~/ftp/$DTB ];then
+	fi
+
+	if [ ! -f ~/ftp/$DTB ]; then
 		cp $bak_path/$DTB ~/ftp/
 	fi
-	if [ ! -f ~/ftp/$MINI_ROOTFS ];then
+
+	if [ ! -f ~/ftp/$MINI_ROOTFS ]; then
 		cp $bak_path/$MINI_ROOTFS ~/ftp/	
 	fi
 
@@ -244,6 +220,7 @@ board_file_copy_ex()
 	rm -f $FTP_DIR/${grubfile}
 	cp ${DEFCFG} $FTP_DIR/${grubfile}
 	chmod a+rw $FTP_DIR/${grubfile}
+
 	rm -f ~/config
 	ln -s $FTP_DIR/${grubfile} ~/config
 }
