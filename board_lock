@@ -1,0 +1,133 @@
+#!/bin/bash
+TOP_DIR=$(cd "`dirname $0`" ; pwd)
+OPENLAB_TOPDIR=/usr/local/openlab
+OPENLAB_CONF_DIR=$OPENLAB_TOPDIR/openlab_conf
+
+USER="`whoami`"
+
+#############################################################################
+# Include
+#############################################################################
+. $OPENLAB_TOPDIR/Include/common.sh
+. $OPENLAB_TOPDIR/Include/userop.sh
+. $OPENLAB_TOPDIR/Include/boardop.sh
+. $OPENLAB_TOPDIR/Include/telnetop.sh
+
+#############################################################################
+# Usage
+#############################################################################
+Usage()
+{
+cat <<EOF
+Usage: board_lock [-h|--help] [-u|--unlock] [-f|--force] [Num]
+To lock/unlock the board specified, default to lock board1 without any parameters!
+    -h|--help    : Display this information
+    -u|--unlock  : To unlock the board specified, default to unlock board1 if argument Num omitted.
+    -f|--force   : Try to lock/unlock the board specified that locked by other users with sudo permission.
+    Num          : To lock/unlock the specified board assigned to user, Num is an interger board index which must be greater than 0, default to board1.
+
+EOF
+
+exit 0
+}
+
+#############################################################################
+# Check if user is in openlab user list
+#############################################################################
+if !(check_user $USER); then
+	exit 1
+fi
+
+#############################################################################
+# Parse script options
+#############################################################################
+UNLOCK=0
+FORCE=0
+BOARD_INDEX=0
+
+while test $# != 0
+do
+	case $1 in
+	"-h" | "--help")
+		Usage
+		;;
+	"-u" | "--unlock")
+		UNLOCK=1
+		;;
+	"-f" | "--force")
+		FORCE=1
+		;;
+	[1-9]*) # Num
+		BOARD_INDEX=$(($1 - 1))
+		;;
+	*)
+		echo -e "\033[31mInvalid arguments!\033[0m" >&2
+		Usage
+		;;
+	esac
+
+	shift
+done
+
+#############################################################################
+# Get BOARD_NO
+#############################################################################
+BOARD_NO=$(get_board_no $USER $BOARD_INDEX)
+if [ x"$BOARD_NO" = x"" ]; then
+	echo -e "\033[31mInvalid boardNo! Please use board_list to get your board info!\033[0m" >&2 ;
+	exit 1
+fi
+
+#############################################################################
+# Check if board is deployed or being used
+#############################################################################
+if !(board_deploy_chk $BOARD_NO); then
+	exit 1
+fi
+
+if !(board_using_chk $USER $BOARD_NO); then
+	curUser=$(get_board_current_user $BOARD_NO)
+	if [ x"$curUser" != x"" ]; then
+		# the board is currently using by others
+		exit 1
+	fi
+
+	# the board was locked by others
+	if [ $FORCE -eq 0 ]; then
+		# can not lock or unlock the board without force
+		exit 1
+	fi
+
+	# force lock/unlock the board
+	# remove the current board lock file
+	lock_file=$(find_board_lock_file $BOARD_NO)
+	read -n1 -p "Force to lock/unlock the board [Y/N]?" answer
+	case $answer in
+		Y | y)
+			echo ""
+			sudo rm -f $lock_file
+			if [ $? -ne 0 ]; then
+				echo "Board state unchanged."
+				exit 1
+			fi
+			;;
+		*)
+			echo -e "\nBoard state unchanged."
+			exit 1
+			;;
+	esac
+fi
+
+#############################################################################
+# Lock or unlock the board of brdNo
+#############################################################################
+if [ $UNLOCK -eq 0 ]; then
+	# lock the board
+	gen_board_lock_file $USER $BOARD_NO
+	echo "Board $BOARD_NO locked successfully."
+else
+	# unlock the board
+	lock_file=$(find_board_lock_file $BOARD_NO)
+	rm -f $lock_file
+	echo "Board $BOARD_NO unlocked successfully."
+fi

@@ -44,6 +44,7 @@ fi
 cp board_connect $BINPATH
 cp board_list $BINPATH
 cp board_reboot $BINPATH
+cp board_lock $BINPATH
 cp newuser $BINPATH
 cp gencfg.sh $BINPATH
 cp inituser $BINPATH

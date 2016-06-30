@@ -5,8 +5,6 @@ export PATH=$TOP_DIR/bin:$PATH
 OPENLAB_TOPDIR=/usr/local/openlab
 OPENLAB_CONF_DIR=$OPENLAB_TOPDIR/openlab_conf
 
-USER=${1:-`whoami`}
-
 #############################################################################
 # Source common variables and user functions
 #############################################################################
@@ -14,10 +12,31 @@ USER=${1:-`whoami`}
 . $OPENLAB_TOPDIR/Include/userop.sh
 
 #############################################################################
+# Usage
+#############################################################################
+Usage()
+{
+cat <<EOF
+Usage: board_list [User]"
+    User       : List boards asigned to User, if omitted, use the current user by default."
+    -h|--help  : Display this information"
+EOF
+
+exit 0
+}
+
+if [ $# != 0 ]; then
+	if [[ $1 == "-h" || $1 == "--help" ]]; then
+		Usage
+	fi
+fi
+
+USER=${1:-`whoami`}
+
+#############################################################################
 # Check if user is in userinfo.cfg
 #############################################################################
-if !(get_user_info $USER >/dev/null); then
-	echo "You are not permited to use the board in OpenLab."
+if !(check_user $USER); then
 	exit 1
 fi
 

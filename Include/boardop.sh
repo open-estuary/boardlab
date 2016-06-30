@@ -29,83 +29,36 @@ get_board_mac()
 }
 
 #############################################################################
-# board_deploy_chk brdNo
+# get_board_no usr brdIdx
 #############################################################################
-board_deploy_chk()
+get_board_no()
 {
-	local brdNo=$1
-	local board_info=$(get_board_info $brdNo)
-	local power_info=$(echo $board_info | grep -Po "(?<=power=)([^,]*)")
-	local power_type=$(echo "$power_info" | grep -Po "(PDU|BMC)")
-	local power_args=($(echo ${power_info#$power_type}))
-	local power_index=${power_args[0]}
-	local power_control_info=
+	local usr=$1
+	local board_index=$2
+	local user_boards=($(get_user_boards $usr))
+	local board_no=
 
-	if [ x"$power_type" = x"PDU" ]; then
-		power_control_info=$(grep -P "^(PDU$power_index:)" $OPENLAB_CONF_DIR/$PDU_INFO_FILE)
+	if [ x"$board_index" = x"" ]; then
+		board_no=${user_boards[0]}
 	else
-		power_control_info=$(grep -P "^(BMC$power_index:)" $OPENLAB_CONF_DIR/$BMC_INFO_FILE)
-	fi
-
-	if [ x"$power_control_info" = x"" ]; then
-		echo "Power$brdNo is not deployed into Open Lab, please touch the Lab. manager." >&2
-		return 1
-	fi
-	
-	return 0
-}
-
-#############################################################################
-# board_using_chk_ex brdNo op
-#############################################################################
-board_using_chk_ex()
-{
-	local brdNo=$1
-	local op=$2
-
-	local user=`whoami`
-	local usr=$(get_board_current_user $brdNo)
-	if [ x"$usr" = x"$user" ]; then
-		if [ x"$op" = x"connect" ]; then
-			echo "You are using another session connected to the board."
-			read -n1 -p "Do you want to kill it and try a new session [Y/N]?" answer
-			case $answer in
-			Y | y)
-				echo  -e "\n fine ,continue"
-				close_board_connect $brdNo
-				local pid=`get_board_connect_pid $brdNo`
-				if [ x"$pid" != x"" ]; then
-					kill -s 9 $pid
-				fi
-				return 0
-				;;
-			N | n)
-				echo -e "\n ok,good bye" ; return 1
-				;;
-			*)
-				echo -e  "\n Sorry! Error choice" ; return 1
-				;;
-			esac
+		if [ $board_index -lt 0 ] || [ $board_index -ge ${#user_boards[@]} ]; then
+			board_index=0
 		fi
-	elif [ x"$usr" != x"" ]; then
-		local email=$(get_user_mail $usr)
-		echo "$email is using the board on $brdNo"
-		echo "if you really want to use it, please contact with him" ; return 1
+		board_no=${user_boards[$board_index]}
 	fi
 
-	return 0
+	echo $board_no
 }
 
 #############################################################################
-# board_using_chk brdNo op
+# get_board_no_by_ser serial
 #############################################################################
-board_using_chk()
+get_board_no_by_ser()
 {
-	if (board_using_chk_ex $1 $2); then
-		return 0
-	else
-		return 1
-	fi
+	local serial=$1
+	local board_info=$(grep -P "serno=$serial" $OPENLAB_CONF_DIR/$BOARD_INFO_FILE)
+	local board_no=$(echo "$board_info" | grep -Po "(?<=BOARD)(\d+)")
+	echo $board_no
 }
 
 #############################################################################
@@ -161,35 +114,41 @@ close_board_connect()
 }
 
 #############################################################################
-# get_board_no_by_ser serial
+# board_deploy_chk brdNo
 #############################################################################
-get_board_no_by_ser()
-{
-	local serial=$1
-	local board_info=$(grep -P "serno=$serial" $OPENLAB_CONF_DIR/$BOARD_INFO_FILE)
-	local board_no=$(echo "$board_info" | grep -Po "(?<=BOARD)(\d+)")
-	echo $board_no
-}
-
-#############################################################################
-# board_deploy_check brdNo
-#############################################################################
-board_deploy_check()
+board_deploy_chk()
 {
 	local brdNo=$1
 	local board_info=$(get_board_info $brdNo)
 	if [ x"$board_info" = x"" ]; then
-		echo "Board$brdNo is not deployed into Open Lab, please touch the Lab. manager."
+		echo -e "\033[31mCan't find board info! Please touch the lab manager to get more help!\033[0m" ;
 		return 1
 	fi
 
-	local power=$(echo "$board_info" | grep -Po "(?<=power=)([^,]*)")
+	local power_info=$(echo $board_info | grep -Po "(?<=power=)([^,]*)")
+	local power_type=$(echo "$power_info" | grep -Po "(PDU|BMC)")
+	local power_args=($(echo ${power_info#$power_type}))
+	local power_index=${power_args[0]}
+	local power_control_info=
+
+	if [ x"$power_type" = x"PDU" ]; then
+		power_control_info=$(grep -P "^(PDU$power_index:)" $OPENLAB_CONF_DIR/$PDU_INFO_FILE)
+	else
+		power_control_info=$(grep -P "^(BMC$power_index:)" $OPENLAB_CONF_DIR/$BMC_INFO_FILE)
+	fi
+
+	if [ x"$power_control_info" = x"" ]; then
+		echo "Power$brdNo is not deployed into Open Lab, please touch the lab manager." >&2
+		return 1
+	fi
+
+	return 0
 }
 
 #############################################################################
-# board_file_copy_ex brdNo
+# board_file_prepare_ex brdNo
 #############################################################################
-board_file_copy_ex()
+board_file_prepare_ex()
 {
 	local board_no=$1
 	local board_type=$(get_board_type $board_no)
@@ -226,12 +185,130 @@ board_file_copy_ex()
 }
 
 #############################################################################
-# board_file_copy brdNo
+# board_file_prepare brdNo
 #############################################################################
-board_file_copy()
+board_file_prepare()
 {
-	(board_file_copy_ex $1)
+	(board_file_prepare_ex $1)
 }
 
+#############################################################################
+# gen_board_lock_file usr brdNo
+#############################################################################
+gen_board_lock_file()
+{
+	local user=$1
+	local board_no=$2
+	local board_mac=$(get_board_mac $board_no)
+	local filename=${user}@${board_mac}.LOCK
+	touch /tmp/$filename
+}
 
+#############################################################################
+# get_board_lock_file_user lockfile
+#############################################################################
+get_board_lock_file_user()
+{
+	local filename=${1#*/}
+	local user=${filename%@*}
+	echo $user
+}
+
+#############################################################################
+# find_board_lock_file brdNo
+#############################################################################
+find_board_lock_file()
+{
+	local board_no=$1
+	local board_mac=$(get_board_mac $board_no)
+	local files=$(cd /tmp; ls *.LOCK 2>/dev/null)
+
+	if !(echo $files |grep "$board_mac"); then
+		# there is no board lock file for the board,
+		# that is, the board is not locked
+		return 1
+	fi
+
+	local filename=
+	for file in $files; do
+		filename=${file%.LOCK}
+		if [ x"${filename#*@}" = x"$board_mac" ]; then
+			echo /tmp/$file
+			break
+		fi
+	done
+
+	return 0
+}
+
+#############################################################################
+# board_is_lock brdNo
+#############################################################################
+board_is_lock()
+{
+	local board_no=$1
+	if (find_board_lock_file $board_no >/dev/null); then
+		return 0
+	else
+		return 1
+	fi
+}
+
+#############################################################################
+# board_using_chk_ex user brdNo
+#############################################################################
+board_using_chk_ex()
+{
+	local user=$1
+	local brdNo=$2
+
+	local email=
+	local curUser=$(get_board_current_user $brdNo)
+
+	if [ x"$curUser" = x"" ]; then
+		# the board is currently not using by anyone
+		if !(board_is_lock $brdNo); then
+			return 0
+		fi
+
+		# the board is locked
+		local lock_file=$(find_board_lock_file $brdNo)
+		local lock_user=$(get_board_lock_file_user $lock_file)
+		if [ x"$lock_user" = x"$user" ]; then
+			# the board locked by yourself
+			return 0
+		else
+			# the board locked by others
+			email=$(get_user_mail $lock_user)
+			echo "the board $brdNo was locked by $lock_user($email)"
+			echo "if you really want to use it, please contact with him,";
+			echo "or use the -f option force to lock/unlock the board with sudo permission."
+			return 1
+		fi
+	elif [ x"$curUser" = x"$user" ]; then
+		# the board is currently using by yourself
+		return 0
+	else
+		# the board is currently using by others
+		email=$(get_user_mail $curUser)
+		echo "$curUser($email) is using the board on $brdNo"
+		echo "if you really want to use it, please contact with him" ;
+		return 1
+	fi
+}
+
+#############################################################################
+# board_using_chk user brdNo
+#############################################################################
+board_using_chk()
+{
+	local user=$1
+	local brdNo=$2
+
+	if (board_using_chk_ex $user $brdNo); then
+		return 0
+	else
+		return 1
+	fi
+}
 

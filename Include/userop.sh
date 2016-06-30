@@ -56,5 +56,16 @@ get_user_info()
 	fi
 }
 
+#############################################################################
+# check_user usr
+#############################################################################
+check_user()
+{
+	local usr=$1
+	if !(get_user_info $usr >/dev/null); then
+		echo -e "\033[31mYou are not permited to use the board in OpenLab.\033[0m"
+		return 1
+	fi
 
-
+	return 0
+}

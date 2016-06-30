@@ -9,7 +9,6 @@ USER="`whoami`"
 # Global Variable
 #############################################################################
 BOARD_OP="reset"
-
 BOARD_NO=
 BOARD_INDEX=
 SERIAL=
@@ -40,8 +39,7 @@ Usage()
 #############################################################################
 # Check if user is in openlab user list
 #############################################################################
-if !(get_user_info $USER >/dev/null); then
-	echo "You are not permited to use the board in OpenLab."
+if !(check_user $USER); then
 	exit 1
 fi
 
@@ -88,35 +86,25 @@ done
 #############################################################################
 # Get BOARD_NO
 #############################################################################
+BOARD_NO=$(get_board_no $USER $BOARD_INDEX)
 if [ x"$BOARD_NO" = x"" ]; then
-	user_boards=($(get_user_boards $USER))
-	if [ x"$BOARD_INDEX" != x"" ]; then
-		if [ $BOARD_INDEX -lt 0 ] || [ $BOARD_INDEX -ge ${#user_boards[@]} ]; then
-			echo -e "\033[31mInvalid board index! Please use board_list to get your board info!\033[0m" >&2 ; exit 1
-		fi
-		BOARD_NO=${user_boards[$BOARD_INDEX]}
-	else
-		BOARD_NO=${user_boards[0]}
-	fi
+	echo -e "\033[31mInvalid boardNo! Please use board_list to get your board info!\033[0m" >&2 ;
+	exit 1
 fi
 
 #############################################################################
-# Check board and operate the power
+# Check if board is deployed or being used
 #############################################################################
-if !(get_board_info $BOARD_NO >/dev/null); then
-	echo -e "\033[31mCan't find board info! Please touch Lab admin to get more help!\033[0m" ; exit 0
-fi
-
 if !(board_deploy_chk $BOARD_NO); then
 	exit 1
 fi
 
-if !(board_using_chk $BOARD_NO $BOARD_OP); then
+if !(board_using_chk $USER $BOARD_NO); then
 	exit 1
 fi
 
+#############################################################################
+# Power operation
+#############################################################################
 board_power $BOARD_NO $BOARD_OP
 echo ""
-
-
-
