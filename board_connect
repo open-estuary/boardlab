@@ -32,14 +32,13 @@ Usage()
     echo "Usage: board_connect [Num]"
     echo "    -h     : Display this information"
     echo "    Num    : To use the specified board assigned to user, Num is an interger board index which must be greater than 0, default to use No.1 board."
-	exit
+    exit
 }
 
 #############################################################################
 # Check if user is in openlab user list
 #############################################################################
-if !(get_user_info $USER >/dev/null); then
-	echo "You are not permited to use the board in OpenLab."
+if !(check_user $USER); then
 	exit 1
 fi
 
@@ -82,41 +81,54 @@ done
 #############################################################################
 # Get BOARD_NO
 #############################################################################
+BOARD_NO=$(get_board_no $USER $BOARD_INDEX)
 if [ x"$BOARD_NO" = x"" ]; then
-	if [ x"$BOARD_INDEX" != x"" ]; then
-		user_boards=($(get_user_boards $USER))
-		if [ $BOARD_INDEX -lt 0 ] || [ $BOARD_INDEX -ge ${#user_boards[@]} ]; then
-			echo -e "\033[31mInvalid board index! Please use board_list to get your board info!\033[0m" >&2 ; exit 1
-		fi
-		BOARD_NO=${user_boards[$BOARD_INDEX]}
-	else
-		user_boards=($(get_user_boards $USER))
-		BOARD_NO=${user_boards[0]}
-	fi
+	echo -e "\033[31mInvalid boardNo! Please use board_list to get your board info!\033[0m" >&2 ;
+	exit 1
 fi
 
 #############################################################################
 # Check if board is deployed or being used 
 #############################################################################
-if !(get_board_info $BOARD_NO >/dev/null); then
-	echo -e "\033[31mCan't find board info! Please touch Lab admin to get more help!\033[0m" ; exit 0
-fi
-
 if !(board_deploy_chk $BOARD_NO); then
 	exit 1
 fi
 
-if !(board_using_chk $BOARD_NO connect); then
+if !(board_using_chk $USER $BOARD_NO); then
 	exit 1
+fi
+
+curUser=$(get_board_current_user $BOARD_NO)
+if [ x"$curUser" != x"" ]; then
+	echo "You are using another session connected to the board."
+	read -n1 -p "Do you want to kill it and try a new session [Y/N]?" answer
+	case $answer in
+	Y | y)
+		echo  -e "\n fine ,continue"
+		close_board_connect $BOARD_NO
+		pid=`get_board_connect_pid $BOARD_NO`
+		if [ x"$pid" != x"" ]; then
+			kill -s 9 $pid
+		fi
+		;;
+	N | n)
+		echo -e "\n ok,good bye" ;
+		exit 1
+		;;
+	*)
+		echo -e  "\n Sorry! Error choice";
+		exit 1
+		;;
+	esac
 fi
 
 #############################################################################
 # Connect to Target Board
 #############################################################################
-board_file_copy $BOARD_NO
+board_file_prepare $BOARD_NO
 
-board_connect_cmd=$(get_board_connect_cmd $BOARD_NO)
 board_type=$(get_board_type $BOARD_NO)
+board_connect_cmd=$(get_board_connect_cmd $BOARD_NO)
 echo -e "\033[32mConnected to board: No=$BOARD_NO, type=$board_type.\033[0m"
 exec $board_connect_cmd
 

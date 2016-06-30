@@ -5,38 +5,61 @@ export PATH=$TOP_DIR/bin:$PATH
 OPENLAB_TOPDIR=/usr/local/openlab
 OPENLAB_CONF_DIR=$OPENLAB_TOPDIR/openlab_conf
 
-USER="`whoami`"
 #############################################################################
-#
+# Source common variables and user functions
 #############################################################################
 . $OPENLAB_TOPDIR/Include/common.sh
 . $OPENLAB_TOPDIR/Include/userop.sh
 
 #############################################################################
+# Usage
+#############################################################################
+Usage()
+{
+cat <<EOF
+Usage: board_list [User]"
+    User       : List boards asigned to User, if omitted, use the current user by default."
+    -h|--help  : Display this information"
+EOF
+
+exit 0
+}
+
+if [ $# != 0 ]; then
+	if [[ $1 == "-h" || $1 == "--help" ]]; then
+		Usage
+	fi
+fi
+
+USER=${1:-`whoami`}
+
+#############################################################################
 # Check if user is in userinfo.cfg
 #############################################################################
-if !(get_user_info $USER >/dev/null); then
-	echo "You are not permited to use the board in OpenLab."
+if !(check_user $USER); then
 	exit 1
 fi
 
 #############################################################################
 # List all shared board info
 #############################################################################
+BOARD_IDX_STR="Idx"
+BOARD_NUM_STR="Board No"
+BOARD_TYPE_STR="Board Type"
 echo "${USER} possessed boards list:"
-printf "%3s: %8s %10s -> Shared Users\n" "Idx" "Board No" "Board Type"
+printf "%${#BOARD_IDX_STR}s: %${#BOARD_NUM_STR}s %${#BOARD_TYPE_STR}s -> Shared Users\n" "${BOARD_IDX_STR}" "${BOARD_NUM_STR}" "${BOARD_TYPE_STR}"
 
 user_boards=($(get_user_boards $USER))
 board_num=${#user_boards[@]}
 
-for (( idx=0; idx<board_num; idx++))
+for ((idx=0; idx<board_num; idx++))
 do
 	board_no=${user_boards[$idx]}
 	board_type=$(grep -E "^(BOARD$board_no:).*" $OPENLAB_CONF_DIR/$BOARD_INFO_FILE | grep -Po "(?<=type=)([^ ,]*)")
-	shared_info=`grep -E "boards=.*\b${board_no}\b" $OPENLAB_CONF_DIR/$USER_INFO_FILE | grep -v "${USER}:" | cut -d "," -f1 | sed "s/email=//g" | tr '\n' ";"|sed "s/;/; /g"`
+	shared_info=`grep -E "boards=.*\b${board_no}\b" $OPENLAB_CONF_DIR/$USER_INFO_FILE | grep -v "${USER}:" | cut -d "," -f1 | sed "s/email=//g" | tr '\n' ';'|sed "s/;/; /g"`
 	if [ x"" = x"$shared_info" ]; then
-		printf "%3s: %8s %10s\n" "$[${idx}+1]" "${board_no}" "${board_type}"
+		printf "%${#BOARD_IDX_STR}s: %${#BOARD_NUM_STR}s %${#BOARD_TYPE_STR}s\n" "$((${idx}+1))" "${board_no}" "${board_type}"
 	else
-		printf "%3s: %8s %10s -> %s\n" "$[${idx}+1]" "${board_no}" "${board_type}" "${shared_info}"
+		printf "%${#BOARD_IDX_STR}s: %${#BOARD_NUM_STR}s %${#BOARD_TYPE_STR}s -> %s\n" "$((${idx}+1))" "${board_no}" "${board_type}" "${shared_info}"
 	fi
 done

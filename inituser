@@ -37,10 +37,6 @@ fi
 USER_BOARDS=($(get_user_boards $USER))
 BOARD_NO=${USER_BOARDS[0]}
 
-if !(get_board_info $BOARD_NO >/dev/null); then
-	echo -e "\033[31mCan't find board info ......\033[0m" ; exit 0
-fi
-
 if !(board_deploy_chk $BOARD_NO); then
 	exit 1
 fi
