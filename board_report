@@ -69,8 +69,8 @@ function user_boards()
     echo "130-135 is 1612_boards(D03 board)  104 is overdrive board  18,19,20 is D01 board  others boars is D02 board"
     echo "all usrs possessed boards details as following :"
     printf "%10s: -> Boards list \n" "Board usrs"
-
-	all_users=($(get_all_users_name))
+    
+    all_users=($(get_all_users_name))
     for usr in ${all_users[*]}
     do
         board_lists=$(get_user_boards $usr)
