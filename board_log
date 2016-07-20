@@ -1,0 +1,83 @@
+#!/bin/bash
+
+OPENLAB_TOPDIR=/usr/local/openlab
+source $OPENLAB_TOPDIR/Include/common.sh
+source $OPENLAB_TOPDIR/Include/userop.sh
+source $OPENLAB_TOPDIR/Include/boardop.sh
+source $OPENLAB_TOPDIR/Include/telnetop.sh
+source $OPENLAB_TOPDIR/Include/bmcop.sh
+source $OPENLAB_TOPDIR/Include/board_serial_op.sh
+source $OPENLAB_TOPDIR/Include/board_power_op.sh
+source $OPENLAB_TOPDIR/Include/pduop.sh
+
+for boardno in ${get_all_boards_no[*]}
+do
+    declare -A board_$boardno
+    boardinfo=board_$boardno
+    eval $boardinfo=\([cur_usr]="" [status]=0 [session_start]=0 [session_end]=0 [session_time]=0\)
+done
+
+mkdir -p /var/log/board_report 2>/dev/null
+LOG_FILE_DIR=/var/log/board_report
+LOG_FILE=${LOG_FILE_DIR}board_used.log
+
+:> $LOG_FILE
+echo -e "Log start at:`date +%s`" >> $LOG_FILE
+
+COUNT=0
+SLEEP_TIME=10  # seconds
+let LOOP_COUNT=24*3600/${SLEEP_TIME}
+MAX_FILE_NUM=4
+
+while true
+do
+    if [ $COUNT -ge $LOOP_COUNT ]; then
+        COUNT=0
+        cd $LOG_FILE_DIR
+
+        for ((i=MAX_FILE_NUM; i>=0; i--))
+        do
+            let j=$i+1
+            file=${LOG_FILE_DIR}board_used.${i}.log
+            file_rename=${LOG_FILE_DIR}board_used.${j}.log
+
+            if [ -e $file ]; then
+                mv $file  $file_rename
+            fi
+        done
+
+        mv $LOG_FILE ${LOG_FILE_DIR}board_used.0.log
+
+        :> $LOG_FILE
+        echo -e "Log start at:`date +%s`" >> $LOG_FILE
+    fi
+
+    for boardno in ${get_all_boards_no[*]}
+    do
+        boardinfo=board_$boardno
+        boardtype=$(get_board_type $boardno)
+        cur_usr=$(get_board_current_user $boardno)
+        if [[ x"$cur_usr" != x"" && x"$(eval echo \${$boardinfo[cur_usr]})" == x"" ]]; then
+            eval $boardinfo[status]=1
+            eval $boardinfo[cur_usr]=$cur_usr
+            eval $boardinfo[session_start]=$(date +%s)
+        elif [[ x"$cur_usr" == x"" && "$(eval echo \${$boardinfo[status]})" == "1" ]]; then
+            eval $boardinfo[status]=0
+            eval $boardinfo[session_end]=$(date +%s)
+            eval let $boardinfo[session_time]=\${$boardinfo[session_end]}-\${$boardinfo[session_start]}
+            printf "boardno:%-10s boardtype: %-10s usr:%-15s session_start:%-12s session_end:%-12s session_time:%-10s\n" \
+                $boardno \
+                $boardtype \
+                $(eval echo \${$boardinfo[cur_usr]}) \
+                $(eval echo \${$boardinfo[session_start]}) \
+                $(eval echo \${$boardinfo[session_end]}) \
+                $(eval echo \${$boardinfo[session_time]}) >> $LOG_FILE
+                
+            eval $boardinfo[cur_usr]=""
+        fi
+    done
+    
+    let COUNT=COUNT+1
+    sleep $SLEEP_TIME
+done
+

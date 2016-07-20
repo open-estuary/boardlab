@@ -1,0 +1,64 @@
+#!/bin/bash
+
+OPENLAB_TOPDIR=/usr/local/openlab
+source $OPENLAB_TOPDIR/Include/common.sh
+source $OPENLAB_TOPDIR/Include/userop.sh
+source $OPENLAB_TOPDIR/Include/boardop.sh
+source $OPENLAB_TOPDIR/Include/telnetop.sh
+source $OPENLAB_TOPDIR/Include/bmcop.sh
+source $OPENLAB_TOPDIR/Include/board_serial_op.sh
+source $OPENLAB_TOPDIR/Include/board_power_op.sh
+source $OPENLAB_TOPDIR/Include/pduop.sh
+
+LOG_FILE_DIR=/var/log/board_report
+LOG_FILE=board_used.log
+
+FIRST_LINE_TIME=$(sed -n '1p' $LOG_FILE_DIR/$LOG_FILE | cut -d ":" -f2)
+LAST_LINE_TIME=$(date +%s)
+# get current day time from last line and first line
+CUR_DAY_TIME=$((LAST_LINE_TIME - FIRST_LINE_TIME))
+LOG_FILE=/tmp/board_used.log
+:> $LOG_FILE
+
+count=0
+cd $LOG_FILE_DIR
+for file in *;
+do
+    let "count += 1"
+    cat $file >> $LOG_FILE
+done
+
+let "count -= 1"
+let total_time=24*3600*$count
+
+let "total_time += $CUR_DAY_TIME"
+
+############## Check how many boards have been used ###############################
+for boardno in ${get_all_boards_no[*]}
+do
+    a=$(grep -w "boardno:${boardno}" $LOG_FILE)
+    if [ -n "$a" ];then
+        boards_used[n]=$boardno
+        let n=n+1
+    fi
+done
+############## To parse max session time, total using time, total time and rating usage from log file ###############################
+for boardno in ${boards_used[*]}
+do
+    a=$(grep -w "boardno:${boardno}" $LOG_FILE)
+
+    usr=$(echo -e "$a" | grep -Po "(?<=usr:)([^ ]+)" | awk '{a[$0]++} END {for(i in a) printf("over past week, %10s use-->%-3s times\n"), i, a[i]}' | sort)
+    echo "==================================================="
+    echo -e "boardno:$boardno\n${usr}"
+
+    max_session_time=$(echo -e "$a" | grep -Po "(?<=session_time:)([^ ]+)" |awk 'BEGIN {max = 0} {if ($1+0 > max+0) max=$1} END {print max}')
+    echo "max session time:${max_session_time}s"
+
+    total_using_time=$(echo -e "$a" | grep -Po "(?<=session_time:)([^ ]+)" |awk 'BEGIN {total_using_time = 0} {total_using_time += $1} END {print total_using_time}')
+
+    echo "total using time:${total_using_time}s" 
+    echo "total time:${total_time}s"
+    echo -n "rating:" 
+    echo "$total_using_time $total_time" | awk '{printf ("%.2f\n",$1/$2)}'
+done
+
