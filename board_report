@@ -1,7 +1,6 @@
 #!/bin/bash
 
 OPENLAB_TOPDIR=/usr/local/openlab
-basepath=$(cd `dirname $0`; pwd)
 source $OPENLAB_TOPDIR/Include/common.sh
 source $OPENLAB_TOPDIR/Include/userop.sh
 source $OPENLAB_TOPDIR/Include/boardop.sh
@@ -10,12 +9,7 @@ source $OPENLAB_TOPDIR/Include/bmcop.sh
 source $OPENLAB_TOPDIR/Include/board_serial_op.sh
 source $OPENLAB_TOPDIR/Include/board_power_op.sh
 source $OPENLAB_TOPDIR/Include/pduop.sh
-
-################# Check how many users have connected the boards, the maximum connection time and usage rating of all the boards over past week########################
-function statistic()
-{
-    ${basepath}/board_log_parser
-}
+source $OPENLAB_TOPDIR/Include/board_log_op.sh
 
 ################# Check the current usage of all the boards########################
 function status()
@@ -75,7 +69,8 @@ function user_boards()
     echo "all usrs possessed boards details as following :"
     printf "%10s: -> Boards list \n" "Board usrs"
 
-    for usr in ${get_all_users_name[*]}
+	all_users=($(get_all_users_name))
+    for usr in ${all_users[*]}
     do
         board_lists=$(get_user_boards $usr)
         board_lists=$(echo "${board_lists}" | tr ' ' ',')
@@ -88,7 +83,7 @@ function usage()
 {
     cat <<-EOF
 Usage:
-execute "board_report --statistic" or "board_report -S" to　check how many people are there in each organization
+execute "board_report --statistic" or "board_report -S" to report boards used statistic of openlab over the past week
 execute "board_report --status" or "board_report -s" to check the current usage of all the boards
 execute "board_report --board-users" or "board_report -U" to check all the boards are owned by which user
 execute "board_report --user-org" or "board_report -O" to　check how many people are there in each organization
@@ -104,8 +99,7 @@ fi
 
 case $1 in
     --statistic | -S)
-        echo ${PWD}
-        statistic
+	   board_used_log_parse
         ;;
     --status | -s)
         status
@@ -119,7 +113,7 @@ case $1 in
     --user-area | -A)
         user-area
         ;;
-    --user-boards | -B)   
+    --user-boards | -B)
         user_boards
         ;;
     --help|-h)

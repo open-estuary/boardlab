@@ -3,8 +3,11 @@
 #############################################################################
 # get all users name
 #############################################################################
-
-get_all_users_name=$(cut -d ":" -f1 $OPENLAB_CONF_DIR/$USER_INFO_FILE | grep ^[a-zA-Z] | tr '\n' ' ')
+get_all_users_name()
+{
+	local all_users_name=$(cut -d ":" -f1 $OPENLAB_CONF_DIR/$USER_INFO_FILE | grep ^[a-zA-Z] | tr '\n' ' ')
+	echo ${all_users_name[*]}
+}
 
 #############################################################################
 # get_user_mail usr
