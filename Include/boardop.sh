@@ -3,8 +3,11 @@
 #############################################################################
 # get all boards number
 #############################################################################
-
-get_all_boards_no=$(grep -E "^(BOARD)" $OPENLAB_CONF_DIR/$BOARD_INFO_FILE | grep -Po "(?<=BOARD)([^:]*)" | tr '\n' ' ')
+get_all_boards_no()
+{
+	local all_boards_no=$(grep -E "^(BOARD)" $OPENLAB_CONF_DIR/$BOARD_INFO_FILE | grep -Po "(?<=BOARD)([^:]*)" | tr '\n' ' ')
+	echo ${all_boards_no[@]}
+}
 
 #############################################################################
 # get_board_type brdNo
