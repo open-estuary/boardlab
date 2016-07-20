@@ -15,7 +15,8 @@ source $OPENLAB_TOPDIR/Include/board_log_op.sh
 function status()
 {
     printf "%3s: %10s is used by -> %s\n" "Board No" "Board Type" "usr"
-    for boardno in ${get_all_boards_no[*]}
+    all_boards_no=($(get_all_boards_no))
+    for boardno in ${all_boards_no[*]}
     do
         usr=$(get_board_current_user $boardno)
         board_type=$(get_board_type $boardno)
@@ -33,8 +34,8 @@ function board-users()
 {
     echo "board_no is possessed as followsing list:"
     printf "%3s: %10s -> Users list\n" "Board No" "Board Type"
-
-    for boardno in ${get_all_boards_no[*]}
+    all_boards_no=($(get_all_boards_no))
+    for boardno in ${all_boards_no[*]}
     do
         board_type=$(get_board_type $boardno)
         usrinfo=$(grep -E "\b${boardno}\b" $OPENLAB_CONF_DIR/$USER_INFO_FILE | cut -d ":" -f1 | grep ^[a-zA-Z] | tr '\n' ';' | sed 's/;/; /g')

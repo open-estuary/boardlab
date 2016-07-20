@@ -10,7 +10,7 @@ source $OPENLAB_TOPDIR/Include/board_serial_op.sh
 source $OPENLAB_TOPDIR/Include/board_power_op.sh
 source $OPENLAB_TOPDIR/Include/pduop.sh
 
-sudo mkdir -p $OPENLAB_LOG_DIR 2>/dev/null
+mkdir -p $OPENLAB_LOG_DIR 2>/dev/null
 LOG_FILE=${OPENLAB_LOG_DIR}/${BOARD_USED_LOG_FILE}
 
 :> $LOG_FILE
