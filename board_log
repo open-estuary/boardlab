@@ -10,12 +10,51 @@ source $OPENLAB_TOPDIR/Include/board_serial_op.sh
 source $OPENLAB_TOPDIR/Include/board_power_op.sh
 source $OPENLAB_TOPDIR/Include/pduop.sh
 
-mkdir -p $OPENLAB_LOG_DIR 2>/dev/null
+MAX_FILE_NUM=4
 LOG_FILE=${OPENLAB_LOG_DIR}/${BOARD_USED_LOG_FILE}
+mkdir -p $OPENLAB_LOG_DIR 2>/dev/null
 
-:> $LOG_FILE
-echo -e "Log start at:`date +%s`" >> $LOG_FILE
+new_log_file()
+{
+	:> $LOG_FILE
+	echo -e "Log start at:`date +%s`" >> $LOG_FILE
+}
 
+rename_log_files()
+{
+	for ((i=MAX_FILE_NUM; i>=0; i--))
+	do
+	    let j=$i+1
+	    file=${LOG_FILE}.${i}
+	    file_old=${LOG_FILE}.${j}
+
+	    if [ -e $file ]; then
+	        mv $file $file_old
+	    fi
+	done
+
+	mv $LOG_FILE ${LOG_FILE}.0
+}
+
+create_log_file()
+{
+	# Rename existing log files
+	rename_log_files
+
+	# Create a new log file
+	new_log_file
+}
+
+# Check existing process
+process=$(ps -x|grep -v "grep"|grep "$0"|wc -l)
+if [ $process -gt 2 ]; then
+	echo -e "$0 is already running."
+	exit 0
+fi
+
+create_log_file
+
+# Initialize all boards status
 all_boards_no=($(get_all_boards_no))
 for boardno in ${all_boards_no[*]}
 do
@@ -24,31 +63,18 @@ do
     eval $boardinfo=\([cur_usr]="" [status]=0 [session_start]=0 [session_end]=0 [session_time]=0\)
 done
 
+# Record all boards usage in a forever loop,
+# keep only the last 7 days' log
+
 COUNT=0
 SLEEP_TIME=10  # seconds
 let LOOP_COUNT=24*3600/${SLEEP_TIME}
-MAX_FILE_NUM=4
 
 while true
 do
     if [ $COUNT -ge $LOOP_COUNT ]; then
         COUNT=0
-
-        for ((i=MAX_FILE_NUM; i>=0; i--))
-        do
-            let j=$i+1
-            file=${LOG_FILE}.${i}
-            file_old=${LOG_FILE}.${j}
-
-            if [ -e $file ]; then
-                mv $file  $file_old
-            fi
-        done
-
-        mv $LOG_FILE ${LOG_FILE}.0
-
-        :> $LOG_FILE
-        echo -e "Log start at:`date +%s`" >> $LOG_FILE
+		create_log_file
     fi
 
     for boardno in ${all_boards_no[*]}
