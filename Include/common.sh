@@ -20,3 +20,5 @@ IMG_D03=Image_D03
 DTB_D03=hip06-d03.dtb
 MINI_ROOTFS="mini-rootfs-arm64.cpio.gz"
 
+OPENLAB_LOG_DIR=/var/log/openlab
+BOARD_USED_LOG_FILE=board_used.log
