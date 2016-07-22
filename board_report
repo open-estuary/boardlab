@@ -1,0 +1,127 @@
+#!/bin/bash
+
+OPENLAB_TOPDIR=/usr/local/openlab
+source $OPENLAB_TOPDIR/Include/common.sh
+source $OPENLAB_TOPDIR/Include/userop.sh
+source $OPENLAB_TOPDIR/Include/boardop.sh
+source $OPENLAB_TOPDIR/Include/telnetop.sh
+source $OPENLAB_TOPDIR/Include/bmcop.sh
+source $OPENLAB_TOPDIR/Include/board_serial_op.sh
+source $OPENLAB_TOPDIR/Include/board_power_op.sh
+source $OPENLAB_TOPDIR/Include/pduop.sh
+source $OPENLAB_TOPDIR/Include/board_log_op.sh
+
+################# Check the current usage of all the boards########################
+function status()
+{
+    printf "%3s: %10s is used by -> %s\n" "Board No" "Board Type" "usr"
+    all_boards_no=($(get_all_boards_no))
+    for boardno in ${all_boards_no[*]}
+    do
+        usr=$(get_board_current_user $boardno)
+        board_type=$(get_board_type $boardno)
+
+        if [ x"$usr" == x"" ]; then
+            usr="null"
+        fi
+
+        printf "%3s:  %10s is used by  -> %s\n" "${boardno}" "${board_type}" "${usr}"
+    done
+}
+
+################## Check all the boards are owned by which user ###################
+function board-users()
+{
+    echo "board_no is possessed as followsing list:"
+    printf "%3s: %10s -> Users list\n" "Board No" "Board Type"
+    all_boards_no=($(get_all_boards_no))
+    for boardno in ${all_boards_no[*]}
+    do
+        board_type=$(get_board_type $boardno)
+        usrinfo=$(grep -E "\b${boardno}\b" $OPENLAB_CONF_DIR/$USER_INFO_FILE | cut -d ":" -f1 | grep ^[a-zA-Z] | tr '\n' ';' | sed 's/;/; /g')
+
+        if [ x"" = x"$usrinfo" ]; then
+            printf "%3s: has no user\n" "${boardno}"
+        else
+            printf "%3s: %10s  -> %s\n" "${boardno}" "${board_type}" "${usrinfo}"
+        fi
+    done
+}
+
+############## Check how many people are there in each organization ###############
+function user-org()
+{
+    a=$(grep -v "^#" $OPENLAB_CONF_DIR/$USER_INFO_FILE | grep -Po "(?<=org=\")[^\"]+(?=\")" | awk '{a[$0]++} END {for(i in a) printf("%-40s: appears ->%-4s \n"),i, a[i]}' | sort)
+    echo "$a"
+}
+
+############## Check how many people are there in each area #######################
+function user-area()
+{
+    a=$(grep -v "^#" $OPENLAB_CONF_DIR/$USER_INFO_FILE | grep -Po "(?<=area=\")([^\"]*)(?=\")" | awk '{a[$0]++} END {for(i in a) printf("%-16s: appears ->%-4s \n"),i, a[i]}' | sort)
+    echo "$a"
+}
+
+############## Check how many boards per user haved ###############################
+function user_boards()
+{
+    echo "boards no: 100 is 1610(1) boards, 101 is expander boards,102 is 1610(2) boards"
+    echo "130-135 is 1612_boards(D03 board)  104 is overdrive board  18,19,20 is D01 board  others boars is D02 board"
+    echo "all usrs possessed boards details as following :"
+    printf "%10s: -> Boards list \n" "Board usrs"
+    all_users=($(get_all_users_name))
+    for usr in ${all_users[*]}
+    do
+        board_lists=$(get_user_boards $usr)
+        board_lists=$(echo "${board_lists}" | tr ' ' ',')
+        printf "%-15s -> %s \n"  "${usr}" "${board_lists}"
+    done
+}
+
+############## See the help of ./board_report.sh###############################
+function usage()
+{
+    cat <<-EOF
+Usage:
+execute "board_report --statistic" or "board_report -S" to report boards used statistic of openlab over the past week
+execute "board_report --status" or "board_report -s" to check the current usage of all the boards
+execute "board_report --board-users" or "board_report -U" to check all the boards are owned by which user
+execute "board_report --user-org" or "board_report -O" to　check how many people are there in each organization
+execute "board_report --user-area" or "board_report -A" to check how many people are there in each area
+execute "board_report --user-boards" or "board_report -B" to check how many boards per user haved been allocated
+EOF
+}
+
+if [ $# -lt 1 ]; then
+    usage
+    exit 0
+fi
+
+case $1 in
+    --statistic | -S)
+		# FIXME need two arguments to call the funcion
+        board_used_log_parse
+        ;;
+    --status | -s)
+        status
+        ;;
+    --board-users | -U)
+        board-users
+        ;;
+    --user-org | -O)
+        user-org
+        ;;
+    --user-area | -A)
+        user-area
+        ;;
+    --user-boards | -B)
+        user_boards
+        ;;
+    --help|-h)
+        usage
+        ;;
+    *)
+        echo "Error command"
+        usage
+        ;;
+esac
