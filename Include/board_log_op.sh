@@ -10,22 +10,26 @@ source $OPENLAB_TOPDIR/Include/board_serial_op.sh
 source $OPENLAB_TOPDIR/Include/board_power_op.sh
 source $OPENLAB_TOPDIR/Include/pduop.sh
 
+# select log files of a period time specified by user
+# select_log_files $1 $2
+# $1 for start time and $2 for end time
+select_log_files()
+{
+	#TODO
+}
+
 board_used_log_parse()
 {
 	local LOG_FILE=${OPENLAB_LOG_DIR}/${BOARD_USED_LOG_FILE}
-
-	# get current day used time
-	local CUR_DAY_START=$(sed -n '1p' $LOG_FILE | cut -d ":" -f2)
-	local CUR_DAY_NOW=$(date +%s)
-	local CUR_DAY_USED_TIME=$((CUR_DAY_NOW - CUR_DAY_START))
-
 	local LOG_FILE_TEMP=/tmp/$BOARD_USED_LOG_FILE
 	:> $LOG_FILE_TEMP
 
+	local time_start=$1
+	local time_end=$2
+	local log_files=$(select_log_files $time_start $time_end)
+
 	local count=0
 	local total_time=0
-	local log_files=$(ls $OPENLAB_LOG_DIR | grep "${BOARD_USED_LOG_FILE}")
-
 	for file in $log_files;
 	do
 	    let "count += 1"
@@ -34,7 +38,14 @@ board_used_log_parse()
 
 	let "count -= 1"
 	let total_time=24*3600*$count
-	let "total_time += $CUR_DAY_USED_TIME"
+
+	if [ $time_start -eq 0 ]; then
+		# get current day used time
+		local CUR_DAY_START=$(sed -n '1p' $LOG_FILE | cut -d ":" -f2)
+		local CUR_DAY_NOW=$(date +%s)
+		local CUR_DAY_USED_TIME=$((CUR_DAY_NOW - CUR_DAY_START))
+		let "total_time += $CUR_DAY_USED_TIME"
+	fi
 
 	############## Check how many boards have been used ###############################
 	local all_boards_no=($(get_all_boards_no))
