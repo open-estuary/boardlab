@@ -99,6 +99,7 @@ fi
 
 case $1 in
     --statistic | -S)
+		# FIXME need two arguments to call the funcion
         board_used_log_parse
         ;;
     --status | -s)

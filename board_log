@@ -10,7 +10,9 @@ source $OPENLAB_TOPDIR/Include/board_serial_op.sh
 source $OPENLAB_TOPDIR/Include/board_power_op.sh
 source $OPENLAB_TOPDIR/Include/pduop.sh
 
-MAX_FILE_NUM=4
+MIN_FILE_NUM=1
+MAX_FILE_NUM=999
+
 LOG_FILE=${OPENLAB_LOG_DIR}/${BOARD_USED_LOG_FILE}
 mkdir -p $OPENLAB_LOG_DIR 2>/dev/null
 
@@ -22,7 +24,7 @@ new_log_file()
 
 rename_log_files()
 {
-	for ((i=MAX_FILE_NUM; i>=0; i--))
+	for ((i=MAX_FILE_NUM-1; i>=MIN_FILE_NUM; i--))
 	do
 	    let j=$i+1
 	    file=${LOG_FILE}.${i}
@@ -33,7 +35,7 @@ rename_log_files()
 	    fi
 	done
 
-	mv $LOG_FILE ${LOG_FILE}.0
+	mv $LOG_FILE ${LOG_FILE}.$MIN_FILE_NUM
 }
 
 create_log_file()
