@@ -5,14 +5,12 @@
 #############################################################################
 board_serial_ex()
 {
-	board_no=$1
-	ser_op=$2
-	
-	board_info=$(grep -P "^(BOARD$board_no:).*" $OPENLAB_CONF_DIR/boardinfo.cfg)
-
-	serial=$(echo "$board_info" | grep -Po "(?<=serno=)([^ ,]*)")
-	serial_type=$(echo "$serial" | grep -Po "(TELNET|BMC)")
-	serial_no=${serial#$serial_type}
+	local board_no=$1
+	local ser_op=$2
+	local board_info=$(get_board_info $board_no)
+	local serial=$(echo "$board_info" | grep -Po "(?<=serno=)([^ ,]*)")
+	local serial_type=$(echo "$serial" | grep -Po "(TELNET|BMC)")
+	local serial_no=${serial#$serial_type}
 
 	if [ x"$serial_type" = x"TELNET" ]; then
 		telnet_serial $serial_no $ser_op
@@ -26,6 +24,6 @@ board_serial_ex()
 #############################################################################
 board_serial()
 {
-	(board_serial_ex $@)
+	board_serial_ex $@
 }
 

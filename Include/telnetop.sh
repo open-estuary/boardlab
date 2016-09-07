@@ -5,14 +5,13 @@
 #############################################################################
 get_telnet_connect_cmd()
 {
-	(
-		telnet="TELNET$1"
-		telnet_info=$(grep -P "^($telnet:).*" $OPENLAB_CONF_DIR/$TELNET_INFO_FILE)
-		telnet_ip=$(echo "$telnet_info" | grep -Po "(?<=ip=)([^,]*)")
-		telnet_port=$(echo "$telnet_info" | grep -Po "(?<=port=)([^,]*)")
-		telnet_op_cmd="telnet $telnet_ip $telnet_port"
-		echo $telnet_op_cmd
-	)
+	local telnet_no=$1
+	local telnet="TELNET$telnet_no"
+	local telnet_info=$(grep -P "^($telnet:).*" $OPENLAB_CONF_DIR/$TELNET_INFO_FILE)
+	local telnet_ip=$(echo "$telnet_info" | grep -Po "(?<=ip=)([^,]*)")
+	local telnet_port=$(echo "$telnet_info" | grep -Po "(?<=port=)([^,]*)")
+	local telnet_op_cmd="telnet $telnet_ip $telnet_port"
+	echo $telnet_op_cmd
 }
 
 #############################################################################
@@ -21,11 +20,10 @@ get_telnet_connect_cmd()
 telnet_connect()
 {
 	(
-	 telnet="TELNET$1"
-	 telnet_info=$(grep -P "^($telnet:).*" $OPENLAB_CONF_DIR/$TELNET_INFO_FILE)
-	 telnet_ip=$(echo "$telnet_info" | grep -Po "(?<=ip=)([^,]*)")
-	 telnet_port=$(echo "$telnet_info" | grep -Po "(?<=port=)([^,]*)")
-	 exec telnet $telnet_ip $telnet_port
+		telnet_op_cmd=$(get_telnet_connect_cmd $@)
+		if [ x"$telnet_op_cmd" != x"" ]; then
+			exec $telnet_op_cmd
+		fi
 	)
 }
 
@@ -34,14 +32,13 @@ telnet_connect()
 #############################################################################
 telnet_disconnect()
 {
-	(
-	telnet="TELNET$1"
-	telnet_info=$(grep -P "^($telnet:).*" $OPENLAB_CONF_DIR/$TELNET_INFO_FILE)
-	telnet_ip=$(echo "$telnet_info" | grep -Po "(?<=ip=)([^,]*)")
-	telnet_port=$(echo "$telnet_info" | grep -Po "(?<=port=)([^,]*)")
-	telnet_pid=$(ps -e -o pid,cmd | grep -Po "(.*)(?=telnet  *$telnet_ip  *$telnet_port)" | grep -v grep | awk '{print $1}')
+	local telnet_no=$1
+	local telnet="TELNET$telnet_no"
+	local telnet_info=$(grep -P "^($telnet:).*" $OPENLAB_CONF_DIR/$TELNET_INFO_FILE)
+	local telnet_ip=$(echo "$telnet_info" | grep -Po "(?<=ip=)([^,]*)")
+	local telnet_port=$(echo "$telnet_info" | grep -Po "(?<=port=)([^,]*)")
+	local telnet_pid=$(ps -e -o pid,cmd | grep -Po "(.*)(?=telnet  *$telnet_ip  *$telnet_port)" | grep -v grep | awk '{print $1}')
 	kill -s 9 $telnet_pid
-	)
 }
 
 #############################################################################
@@ -49,8 +46,9 @@ telnet_disconnect()
 #############################################################################
 telnet_serial_ex()
 {
-	telnet_no=$1
-	telnet_op=$2
+	local telnet_no=$1
+	local telnet_op=$2
+
 	case $telnet_op in
 	"connect")
 		telnet_connect $telnet_no ;;
@@ -64,7 +62,7 @@ telnet_serial_ex()
 #############################################################################
 telnet_serial()
 {
-	(telnet_serial_ex $@)
+	telnet_serial_ex $@
 }
 
 

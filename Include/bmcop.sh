@@ -5,17 +5,18 @@
 #############################################################################
 get_bmc_op_cmd()
 {
-	(
-	bmc="BMC$1"
+	local board_no=$1
+	local bmc="BMC${board_no}"
 	shift
-	bmc_op=$@
-	bmc_info=$(grep -P "^($bmc:).*" $OPENLAB_CONF_DIR/$BMC_INFO_FILE)
-	bmc_ip=$(echo "$bmc_info" | grep -Po "(?<=ip=)([^,]*)")
-	bmc_account=$(echo "$bmc_info" | grep -Po "(?<=account=)([^,]*)")
-	bmc_pass=$(echo "$bmc_info" | grep -Po "(?<=pass=)([^,]*)")
-	bmc_op_cmd="ipmitool -H $bmc_ip -I lanplus -U $bmc_account -P $bmc_pass $bmc_op"
+
+	local bmc_op=$@
+	local bmc_info=$(grep -P "^($bmc:).*" $OPENLAB_CONF_DIR/$BMC_INFO_FILE)
+	local bmc_ip=$(echo "$bmc_info" | grep -Po "(?<=ip=)([^,]*)")
+	local bmc_if=$(echo "$bmc_info" | grep -Po "(?<=interface=)([^,]*)")
+	local bmc_account=$(echo "$bmc_info" | grep -Po "(?<=account=)([^,]*)")
+	local bmc_pass=$(echo "$bmc_info" | grep -Po "(?<=pass=)([^,]*)")
+	local bmc_op_cmd="ipmitool -H $bmc_ip -I $bmc_if -U $bmc_account -P $bmc_pass $bmc_op"
 	echo $bmc_op_cmd
-	)
 }
 
 #############################################################################
@@ -36,7 +37,8 @@ send_cmd_to_bmc()
 #############################################################################
 get_bmc_connect_cmd()
 {
-	get_bmc_op_cmd $1 sol activate
+	local bmc_no=$1
+	get_bmc_op_cmd $bmc_no sol activate
 }
 
 #############################################################################
@@ -44,7 +46,8 @@ get_bmc_connect_cmd()
 #############################################################################
 bmc_connect()
 {
-	send_cmd_to_bmc $1 sol activate
+	local bmc_no=$1
+	send_cmd_to_bmc $bmc_no sol activate
 }
 
 #############################################################################
@@ -52,38 +55,15 @@ bmc_connect()
 #############################################################################
 bmc_disconnect()
 {
-	(
-	send_cmd_to_bmc $1 sol deactivate
-	bmc_connect_cmd=$(get_bmc_op_cmd $1 sol activate)
-	bmc_pid=$(ps -o pid,cmd | grep "$bmc_connect_cmd" | grep -v grep | awk '{print $1}')
+	local bmc_no=$1
+	local bmc_connect_cmd=$(get_bmc_connect_cmd $bmc_no)
+	local bmc_pid=$(ps -o pid,cmd | grep "$bmc_connect_cmd" | grep -v grep | awk '{print $1}')
+
+	send_cmd_to_bmc $bmc_no sol deactivate
+
 	if [ x"$bmc_pid" != x"" ]; then
 		kill -s 9 $bmc_pid
 	fi
-	)
-}
-
-#############################################################################
-# bmc_power_on bmcNo
-#############################################################################
-bmc_power_on()
-{
-	send_cmd_to_bmc $1 chassis power on
-}
-
-#############################################################################
-# bmc_power_off bmcNo
-#############################################################################
-bmc_power_off()
-{
-	send_cmd_to_bmc $1 chassis power off
-}
-
-#############################################################################
-# bmc_power_reset bmcNo
-#############################################################################
-bmc_power_reset()
-{
-	send_cmd_to_bmc $1 chassis power reset
 }
 
 #############################################################################
@@ -91,7 +71,36 @@ bmc_power_reset()
 #############################################################################
 bmc_power()
 {
-	send_cmd_to_bmc $1 chassis power $2
+	local bmc_no=$1
+	local power_op=$2
+	send_cmd_to_bmc $bmc_no chassis power $power_op
+}
+
+#############################################################################
+# bmc_power_on bmcNo
+#############################################################################
+bmc_power_on()
+{
+	local bmc_no=$1
+	bmc_power $bmc_no on
+}
+
+#############################################################################
+# bmc_power_off bmcNo
+#############################################################################
+bmc_power_off()
+{
+	local bmc_no=$1
+	bmc_power $bmc_no off
+}
+
+#############################################################################
+# bmc_power_reset bmcNo
+#############################################################################
+bmc_power_reset()
+{
+	local bmc_no=$1
+	bmc_power $bmc_no reset
 }
 
 #############################################################################
@@ -99,8 +108,8 @@ bmc_power()
 #############################################################################
 bmc_serial_ex()
 {
-	bmc_no=$1
-	sol_op=$2
+	local bmc_no=$1
+	local sol_op=$2
 
 	case $sol_op in
 	"connect")
@@ -115,6 +124,6 @@ bmc_serial_ex()
 #############################################################################
 bmc_serial()
 {
-	(bmc_serial_ex $@)
+	bmc_serial_ex $@
 }
 

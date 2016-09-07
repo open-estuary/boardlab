@@ -1,19 +1,9 @@
 #!/bin/bash
-
 TOP_DIR=$(cd "`dirname $0`" ; pwd)
-export PATH=$PATH:$TOP_DIR
-
 OPENLAB_TOPDIR=/usr/local/openlab
 OPENLAB_CONF_DIR=$OPENLAB_TOPDIR/openlab_conf
 
 USER="`whoami`"
-
-#############################################################################
-# Global Variable
-#############################################################################
-BOARD_NO=
-SERIAL=
-BOARD_INDEX=
 
 #############################################################################
 # Include
@@ -22,18 +12,22 @@ BOARD_INDEX=
 . $OPENLAB_TOPDIR/Include/userop.sh
 . $OPENLAB_TOPDIR/Include/boardop.sh
 . $OPENLAB_TOPDIR/Include/telnetop.sh
-. $OPENLAB_TOPDIR/Include/bmcop.sh
-. $OPENLAB_TOPDIR/Include/board_serial_op.sh
 
 #############################################################################
 # Usage
 #############################################################################
 Usage()
 {
-	echo "Usage: board_connect [Num]"
-	echo -e "\t -h     : Display this information"
-	echo -e "\t Num    : To use the specified board assigned to user, Num is an interger board index which must be greater than 0, default to use No.1 board."
-	exit
+cat <<EOF
+Usage: board_lock [-h|--help] [-u|--unlock] [-f|--force] [Num]
+To lock/unlock the board specified, default to lock board1 without any parameters!
+	-h|--help    : Display this information
+	-u|--unlock  : To unlock the board specified, default to unlock board1 if argument Num omitted.
+	-f|--force   : Try to lock/unlock the board specified that locked by other users with sudo permission.
+	Num          : To lock/unlock the specified board assigned to user, Num is an interger board index which must be greater than 0, default to board1.
+EOF
+
+exit 0
 }
 
 #############################################################################
@@ -44,36 +38,31 @@ if !(check_user $USER); then
 fi
 
 #############################################################################
-# Get BOARD_INDEX/BOARD_NO/SERIAL
+# Parse script options
 #############################################################################
+UNLOCK=0
+FORCE=0
+BOARD_INDEX=0
+
 while test $# != 0
 do
 	case $1 in
-	--*=*)
-		ac_option=`expr "X$1" : 'X\([^=]*\)='`
-		ac_optarg=`expr "X$1" : 'X[^=]*=\(.*\)'`
-		ac_shift=:
-		;;
-	-*)
-		ac_option=$1
-		ac_optarg=$2
-		ac_shift=shift
-		;;
-	*)
-		ac_option=$1
-		ac_optarg=$1
-		ac_shift=:
-		;;
-	esac
-
-	case $ac_option in
 	"-h" | "--help")
-		Usage ; exit 0 ;;
-	[0-9]*)
-		BOARD_INDEX=$[$ac_optarg - 1] ;;
+		Usage
+		;;
+	"-u" | "--unlock")
+		UNLOCK=1
+		;;
+	"-f" | "--force")
+		FORCE=1
+		;;
+	[1-9]*) # Num
+		BOARD_INDEX=$(($1 - 1))
+		;;
 	*)
-		echo -e "\033[31mUnknown option $ac_option!\033[0m" >&2
-		Usage ; exit 1 ;;
+		echo -e "\033[31mInvalid arguments!\033[0m" >&2
+		Usage
+		;;
 	esac
 
 	shift
@@ -96,40 +85,48 @@ if !(board_deploy_chk $BOARD_NO); then
 fi
 
 if !(board_using_chk $USER $BOARD_NO); then
-	exit 1
-fi
+	curUser=$(get_board_current_user $BOARD_NO)
+	if [ x"$curUser" != x"" ]; then
+		# the board is currently using by others
+		exit 1
+	fi
 
-curUser=$(get_board_current_user $BOARD_NO)
-if [ x"$curUser" != x"" ]; then
-	echo "You are using another session connected to the board."
-	read -n1 -p "Do you want to kill it and try a new session [Y/N]?" answer
+	# the board was locked by others
+	if [ $FORCE -eq 0 ]; then
+		# can not lock or unlock the board without force
+		exit 1
+	fi
+
+	# force lock/unlock the board
+	# remove the current board lock file
+	lock_file=$(find_lock_file $BOARD_NO)
+	read -n1 -p "Force to lock/unlock the board [Y/N]?" answer
 	case $answer in
-	Y | y)
-		echo  -e "\n fine ,continue"
-		close_board_connect $BOARD_NO
-		pid=`get_board_connect_pid $BOARD_NO`
-		if [ x"$pid" != x"" ]; then
-			kill -s 9 $pid
-		fi
-		;;
-	N | n)
-		echo -e "\n ok,good bye" ;
-		exit 1
-		;;
-	*)
-		echo -e  "\n Sorry! Error choice";
-		exit 1
-		;;
+		Y | y)
+			echo ""
+			sudo rm -f $lock_file
+			if [ $? -ne 0 ]; then
+				echo "Board state unchanged."
+				exit 1
+			fi
+			;;
+		*)
+			echo -e "\nBoard state unchanged."
+			exit 1
+			;;
 	esac
 fi
 
 #############################################################################
-# Connect to Target Board
+# Lock or unlock the board of brdNo
 #############################################################################
-board_file_prepare $BOARD_NO
-
-board_type=$(get_board_type $BOARD_NO)
-board_connect_cmd=$(get_board_connect_cmd $BOARD_NO)
-echo -e "\033[32mConnected to board: No=$BOARD_NO, type=$board_type.\033[0m"
-exec $board_connect_cmd
-
+if [ $UNLOCK -eq 0 ]; then
+	# lock the board
+	gen_lock_file $USER $BOARD_NO
+	echo "Board $BOARD_NO locked successfully."
+else
+	# unlock the board
+	lock_file=$(find_lock_file $BOARD_NO)
+	rm -f $lock_file
+	echo "Board $BOARD_NO unlocked successfully."
+fi
