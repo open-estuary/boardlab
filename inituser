@@ -37,10 +37,6 @@ fi
 USER_BOARDS=($(get_user_boards $USER))
 BOARD_NO=${USER_BOARDS[0]}
 
-if !(get_board_info $BOARD_NO >/dev/null); then
-	echo -e "\033[31mCan't find board info ......\033[0m" ; exit 0
-fi
-
 if !(board_deploy_chk $BOARD_NO); then
 	exit 1
 fi
@@ -49,19 +45,19 @@ fi
 # Create soft link and files.
 #############################################################################
 if [ -L ~/ftp ];then
-    rm ~/ftp
+	rm ~/ftp
 fi
 
 if [ -L ~/config ];then
-    rm ~/config
+	rm ~/config
 fi
 
 if [ ! -f "${DEFCFG}" ];then
-    gencfg.sh
+	gencfg.sh
 fi
 
 if [ ! -d $USER_FTPDIR ];then
-    mkdir -p $USER_FTPDIR
+	mkdir -p $USER_FTPDIR
 fi
 
 baord_mac=$(get_board_mac $BOARD_NO)
@@ -71,36 +67,36 @@ ln -s $USER_FTPDIR ~/ftp
 
 #init the ftp directory
 if [ $? = 0 ];then
-    if [ ! -e $USER_FTPDIR/$IMG_D01 ];then
-        cp $BACK_UP/$IMG_D01 ~/ftp
-    fi
+	if [ ! -e $USER_FTPDIR/$IMG_D01 ];then
+		cp $BACK_UP/$IMG_D01 ~/ftp
+	fi
 
-    if [ ! -e $USER_FTPDIR/$IMG_D02 ];then
-        cp $BACK_UP/$IMG_D02 ~/ftp
-    fi
+	if [ ! -e $USER_FTPDIR/$IMG_D02 ];then
+		cp $BACK_UP/$IMG_D02 ~/ftp
+	fi
 
-    if [ ! -e $USER_FTPDIR/$IMG_D03 ];then
-        cp $BACK_UP/$IMG_D03 ~/ftp
-    fi
+	if [ ! -e $USER_FTPDIR/$IMG_D03 ];then
+		cp $BACK_UP/$IMG_D03 ~/ftp
+	fi
 
-    if [ ! -e $USER_FTPDIR/$DTB_D01 ];then
-        cp $BACK_UP/$DTB_D01 ~/ftp
-    fi
+	if [ ! -e $USER_FTPDIR/$DTB_D01 ];then
+		cp $BACK_UP/$DTB_D01 ~/ftp
+	fi
 
-    if [ ! -e $USER_FTPDIR/$DTB_D02 ];then
-        cp $BACK_UP/$DTB_D02 ~/ftp
-    fi
+	if [ ! -e $USER_FTPDIR/$DTB_D02 ];then
+		cp $BACK_UP/$DTB_D02 ~/ftp
+	fi
 
-    if [ ! -e $USER_FTPDIR/$DTB_D03 ];then
-        cp $BACK_UP/$DTB_D03 ~/ftp
-    fi
+	if [ ! -e $USER_FTPDIR/$DTB_D03 ];then
+		cp $BACK_UP/$DTB_D03 ~/ftp
+	fi
 
-    if [ ! -e $USER_FTPDIR/$MINI_ROOTFS ];then
-        cp $BACK_UP/$MINI_ROOTFS ~/ftp
-    fi
+	if [ ! -e $USER_FTPDIR/$MINI_ROOTFS ];then
+		cp $BACK_UP/$MINI_ROOTFS ~/ftp
+	fi
 
-    if [ ! -d $USER_FTPDIR/ubuntu ];then
-        mkdir $USER_FTPDIR/ubuntu
-    fi
+	if [ ! -d $USER_FTPDIR/ubuntu ];then
+		mkdir $USER_FTPDIR/ubuntu
+	fi
 fi
 
